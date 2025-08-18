@@ -1,0 +1,112 @@
+---
+# version: '3.8'
+ 
+networks:
+  rmoff_kafka:
+    name: rmoff_kafka
+ 
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    networks:
+      - rmoff_kafka
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+ 
+  broker1:
+    image: confluentinc/cp-kafka:7.9.1
+    container_name: broker
+    ports:
+      - "19092:19092"
+      - "9999:9999"  # JMX Port
+    networks:
+      - rmoff_kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,CONNECTIONS_FROM_HOST://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONNECTIONS_FROM_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+ 
+  broker2:
+    image: confluentinc/cp-kafka:7.9.1
+    container_name: broker2
+    ports:
+      - "29092:29092"
+      - "9998:9999"  # JMX Port
+    networks:
+      - rmoff_kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker2:9092,CONNECTIONS_FROM_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONNECTIONS_FROM_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  broker3:
+    image: confluentinc/cp-kafka:7.9.1
+    container_name: broker3
+    ports:
+      - "39092:39092"
+      - "9997:9999"  # JMX Port
+    networks:
+      - rmoff_kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker3:9092,CONNECTIONS_FROM_HOST://localhost:39092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONNECTIONS_FROM_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3  
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8080:8080
+    depends_on:
+      - broker1
+      - broker2      
+      - broker3
+    networks:
+      - rmoff_kafka      
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:9092
+      KAFKA_CLUSTERS_0_METRICS_PORT: 9997
+      DYNAMIC_CONFIG_ENABLED: 'true'
+  remote-mngr-service:
+    image: remote-mgmt-service:latest
+    container_name: remote-mgmt-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - broker1
+      - broker2
+      - broker3
+      - couchbase
+    networks:
+      - rmoff_kafka
+    environment:
+      KAFKA_BOOTSTRAP_URLS: broker:9092
+      KAFKA_TOPIC: dev.private.msil.trip.v1
+	  COUCHBASE_URL: couchbase://couchbase
+	  COUCHBASE_USERNAME: administrator
+	  COUCHBASE_PASSWORD: password
+	  COUCHBASE_BUCKET: msil-bucket
+  couchbase:
+    image: couchbase:latest
+    container_name: couchbase
+    networks:
+      - rmoff_kafka
+    ports:
+      - "8091-8097:8091-8097"
+      - "9123:9123"
+      - "11207:11207"
+      - "11210:11210"
+      - "11280:11280"
+      - "18091-18097:18091-18097"

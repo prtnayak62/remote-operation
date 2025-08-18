@@ -1,0 +1,346 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Service-specific IAM Policy Template v7 - Enhanced for All Service Types'
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+  
+  Region:
+    Type: String
+    Description: AWS Region for resource naming
+  
+  ServiceName:
+    Type: String
+    Description: Name of the microservice
+  
+  ServiceType:
+    Type: String
+    AllowedValues: [api, kafka-consumer, sqs-sns-worker, internal-service, batch-job]
+    Description: Type of service
+  
+  # Optional service-specific permissions
+  NeedsMSK:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need MSK access?
+  
+  NeedsSQS:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need SQS access?
+  
+  NeedsSNS:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need SNS access?
+  
+  NeedsS3:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need S3 access?
+  
+  NeedsDatabase:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need RDS/Aurora access?
+  
+  NeedsRedis:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need ElastiCache Redis access?
+  
+  NeedsDynamoDB:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need DynamoDB/DAX access?
+
+Conditions:
+  RequiresMSK: !Equals [!Ref NeedsMSK, 'true']
+  RequiresSQS: !Equals [!Ref NeedsSQS, 'true']
+  RequiresSNS: !Equals [!Ref NeedsSNS, 'true']
+  RequiresS3: !Equals [!Ref NeedsS3, 'true']
+  RequiresDatabase: !Equals [!Ref NeedsDatabase, 'true']
+  RequiresRedis: !Equals [!Ref NeedsRedis, 'true']
+  RequiresDynamoDB: !Equals [!Ref NeedsDynamoDB, 'true']
+  IsAPIService: !Equals [!Ref ServiceType, 'api']
+  IsKafkaConsumer: !Equals [!Ref ServiceType, 'kafka-consumer']
+  IsSQSSNSWorker: !Equals [!Ref ServiceType, 'sqs-sns-worker']
+  IsInternalService: !Equals [!Ref ServiceType, 'internal-service']
+  IsBatchJob: !Equals [!Ref ServiceType, 'batch-job']
+  IsDev: !Equals [!Ref Environment, 'dev']
+
+Resources:
+  # Service-specific IAM Policy
+  ServicePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${Environment}-${ServiceName}-policy-v7-${Region}'
+      Description: !Sub 'Service-specific permissions for ${ServiceName} (v7)'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # f# For exec enable on task required these for Dev env
+          - !If
+            - IsDev
+            - Effect: Allow
+              Action:                 
+                - ssmmessages:CreateControlChannel
+                - ssmmessages:CreateDataChannel
+                - ssmmessages:OpenControlChannel
+                - ssmmessages:OpenDataChannel
+              Resource: "*"
+            - !Ref AWS::NoValue
+          # Basic CloudWatch Logs access (always needed)
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${Environment}-${ServiceName}:*'
+          
+          # X-Ray permissions (always needed for tracing)
+          - Effect: Allow
+            Action:
+              - xray:PutTraceSegments
+              - xray:PutTelemetryRecords
+              - xray:GetSamplingRules
+              - xray:GetSamplingTargets
+            Resource: '*'
+          
+          # Secrets Manager and KMS access for API services
+          - !If
+            - IsAPIService
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+                - secretsmanager:DescribeSecret
+              Resource: !ImportValue
+                Fn::Sub: '${Environment}-DatabaseMasterSecretArn'
+            - !Ref AWS::NoValue
+          
+          - !If
+            - IsAPIService
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !Sub 
+                - 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKeyId}'
+                - SecretsKMSKeyId: !ImportValue
+                    Fn::Sub: '${Environment}-SecretsKMSKeyId'
+            - !Ref AWS::NoValue
+          
+          # MSK access (conditional)
+          - !If
+            - RequiresMSK
+            - Effect: Allow
+              Action:
+                - kafka:DescribeCluster
+                - kafka:GetBootstrapBrokers
+                - kafka:ListClusters
+                - kafka:ListTopics
+                - kafka:DescribeTopicDynamicConfiguration
+                - kafka:DescribeClusterV2
+                - kafka:DescribeClusterOperation
+                - cloudformation:ListExports
+              Resource: '*'
+            - !Ref AWS::NoValue
+          
+          - !If
+            - RequiresMSK
+            - Effect: Allow
+              Action:
+                - kafka-cluster:Connect
+                - kafka-cluster:AlterCluster
+                - kafka-cluster:DescribeCluster
+              Resource: 
+                - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:cluster/${Environment}-msk-serverless/*'
+            - !Ref AWS::NoValue
+          
+          - !If
+            - RequiresMSK
+            - Effect: Allow
+              Action:
+                - kafka-cluster:*Topic*
+                - kafka-cluster:WriteData
+                - kafka-cluster:ReadData
+              Resource: 
+                - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:topic/${Environment}-msk-serverless/*'
+            - !Ref AWS::NoValue
+          
+          - !If
+            - RequiresMSK
+            - Effect: Allow
+              Action:
+                - kafka-cluster:AlterGroup
+                - kafka-cluster:DescribeGroup
+              Resource: 
+                - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:group/${Environment}-msk-serverless/*'
+            - !Ref AWS::NoValue
+          
+          # SQS access (conditional)
+          - !If
+            - RequiresSQS
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - sqs:GetQueueAttributes
+                - sqs:ChangeMessageVisibility
+                - sqs:GetQueueUrl
+              Resource: 
+                - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-${ServiceName}-*'
+                - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-*'
+            - !Ref AWS::NoValue
+          
+          # SNS access (conditional)
+          - !If
+            - RequiresSNS
+            - Effect: Allow
+              Action:
+                - sns:Publish
+                - sns:Subscribe
+                - sns:Unsubscribe
+                - sns:GetTopicAttributes
+              Resource: 
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Environment}-${ServiceName}-*'
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Environment}-*'
+            - !Ref AWS::NoValue
+          
+          # S3 access (conditional)
+          - !If
+            - RequiresS3
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+              Resource: 
+                - !Sub 'arn:aws:s3:::${Environment}-${ServiceName}-*/*'
+            - !Ref AWS::NoValue
+          
+          # Database access (conditional)
+          - !If
+            - RequiresDatabase
+            - Effect: Allow
+              Action:
+                - rds:DescribeDBClusters
+                - rds:DescribeDBInstances
+                - rds:DescribeDBClusterSnapshots
+                - rds:DescribeDBSnapshots
+                - rds:ListTagsForResource
+              Resource: '*'
+            - !Ref AWS::NoValue
+          
+          - !If
+            - RequiresDatabase
+            - Effect: Allow
+              Action:
+                - rds-db:connect
+              Resource: 
+                - !Sub 'arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${Environment}-*/*'
+            - !Ref AWS::NoValue
+          
+          # Redis/ElastiCache access (conditional)
+          - !If
+            - RequiresRedis
+            - Effect: Allow
+              Action:
+                - elasticache:DescribeCacheClusters
+                - elasticache:DescribeReplicationGroups
+                - elasticache:DescribeCacheSubnetGroups
+                - elasticache:DescribeCacheParameters
+                - elasticache:DescribeCacheParameterGroups
+                - elasticache:ListTagsForResource
+              Resource: '*'
+            - !Ref AWS::NoValue
+          
+          # DynamoDB/DAX access (conditional)
+          - !If
+            - RequiresDynamoDB
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:BatchGetItem
+                - dynamodb:BatchWriteItem
+                - dynamodb:DescribeTable
+                - dynamodb:ListTables
+                - dynamodb:DescribeStream
+                - dynamodb:GetRecords
+                - dynamodb:GetShardIterator
+                - dynamodb:ListStreams
+              Resource:
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-*'
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-*/index/*'
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-*/stream/*'
+            - !Ref AWS::NoValue
+          
+          - !If
+            - RequiresDynamoDB
+            - Effect: Allow
+              Action:
+                - dax:GetItem
+                - dax:PutItem
+                - dax:UpdateItem
+                - dax:DeleteItem
+                - dax:Query
+                - dax:Scan
+                - dax:BatchGetItem
+                - dax:BatchWriteItem
+                - dax:DescribeTable
+                - dax:ListTables
+              Resource:
+                - !Sub 'arn:aws:dax:${AWS::Region}:${AWS::AccountId}:cache/${Environment}-*'
+            - !Ref AWS::NoValue
+
+  # Service-specific Task Role
+  ServiceTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-${ServiceName}-task-role-v7-${Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref ServicePolicy
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref ServiceName
+        - Key: ServiceType
+          Value: !Ref ServiceType
+        - Key: Version
+          Value: v7
+
+Outputs:
+  ServiceTaskRoleArn:
+    Description: Service-specific Task Role ARN (v7)
+    Value: !GetAtt ServiceTaskRole.Arn
+    Export:
+      Name: !Sub '${Environment}-${ServiceName}-TaskRoleArn-v7'
+
+  ServicePolicyArn:
+    Description: Service-specific Policy ARN (v7)
+    Value: !Ref ServicePolicy
+    Export:
+      Name: !Sub '${Environment}-${ServiceName}-PolicyArn-v7'

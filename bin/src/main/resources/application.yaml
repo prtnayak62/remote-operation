@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: remote-mngr-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_URLS}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+
+app:
+  couchbase:
+    cluster:
+      url: ${COUCHBASE_URL}
+      username: ${COUCHBASE_USERNAME}
+      password: ${COUCHBASE_PASSWORD}
+      bucket: ${COUCHBASE_BUCKET}
+  kafka:
+    trip:
+      topic: ${KAFKA_TOPIC}
+
+server:
+  port: 8081

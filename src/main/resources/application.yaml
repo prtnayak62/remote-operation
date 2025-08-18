@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: remote-mngr-service
+
+couchbase-properties:
+  credentials: "${COUCHBASE_CREDENTIALS}"
+  bucket: ${COUCHBASE_BUCKET}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: DEBUG
+
+server:
+  port: 8081

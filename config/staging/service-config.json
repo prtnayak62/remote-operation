@@ -1,0 +1,39 @@
+﻿{
+    "ServiceType":  "internal-service",
+    "Features":  {
+                     "EnableExecuteCommand":  false,
+                     "LogLevel":  "INFO",
+                     "EnableXRayTracing":  true,
+                     "EnableDebugEndpoints":  false
+                 },
+    "ServiceName":  "remote-mngr-service",
+    "DatabaseUser":  "admin",
+    "ServicePort":  9090,
+    "Environment":  "staging",
+    "TaskMemory":  1024,
+    "Security":  {
+                     "RunAsNonRoot":  false,
+                     "ReadonlyRootFilesystem":  false
+                 },
+    "HealthCheckPath":  "/health",
+    "ServiceTypeFeatures":  {
+                                "loadBalancer":  false,
+                                "autoScaling":  true,
+                                "serviceConnect":  true,
+                                "xrayTracing":  true
+                            },
+    "TaskCpu":  512,
+    "ResourceAccess":  {
+                           "NeedsDynamoDB":  false,
+                           "NeedsMSK":  false,
+                           "NeedsDatabase":  false,
+                           "NeedsSNS":  false,
+                           "NeedsRedis":  false,
+                           "NeedsSQS":  false
+                       },
+    "HealthCheckProtocol":  "HTTP",
+    "MinCapacity":  1,
+    "MaxCapacity":  10,
+    "DesiredCount":  1,
+    "APIGroupName":  ""
+}
