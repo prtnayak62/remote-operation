@@ -40,7 +40,7 @@ public class RemoteUtils {
             return formattedDate;
         }
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            SimpleDateFormat sdf = new SimpleDateFormat(MSILConstants.ISO_DATE_PATTERN);
             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
             Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("IST"));
             cal.setTimeInMillis(sdf.parse(dateStr).getTime());
@@ -56,9 +56,9 @@ public class RemoteUtils {
             return null;
         }
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            SimpleDateFormat sdf = new SimpleDateFormat(MSILConstants.ISO_DATE_PATTERN);
             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-            SimpleDateFormat requiredFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            SimpleDateFormat requiredFormat = new SimpleDateFormat(MSILConstants.REQ_ISO_DATE_PATTERN);
             requiredFormat.setTimeZone(TimeZone.getTimeZone("IST"));
             return requiredFormat.format(sdf.parse(dateStr));
         } catch (ParseException e) {
@@ -69,7 +69,7 @@ public class RemoteUtils {
 
     public static Date convertStringToDate(String date){
 		try {
-			return new SimpleDateFormat("yyyyy-MM-dd HH:mm:ss").parse(date);
+			return new SimpleDateFormat(MSILConstants.REQ_ISO_DATE_PATTERN).parse(date);
 		} catch (ParseException e) {
 			log.error("Error converting String to Date: ", e);
 		}

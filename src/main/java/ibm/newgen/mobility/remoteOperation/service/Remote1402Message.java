@@ -3,12 +3,14 @@ package ibm.newgen.mobility.remoteOperation.service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibm.autoconnect.rule.model.CarProbePayload;
 
 import ibm.newgen.mobility.remoteOperation.model.CarProbe;
 import ibm.newgen.mobility.remoteOperation.model.RemoteControlCallback;
@@ -28,9 +30,11 @@ public class Remote1402Message implements RemoteProcessor {
     }
 
     @Override
-    public void processMessage(JSONObject data) {
+    public CarProbePayload processMessage(JSONObject data) {
     	HashMap<String,Object> probeMap = new HashMap<>();
-
+    	Properties props = new Properties();
+    	CarProbePayload carProbePayload=new CarProbePayload();
+       
     	
         try {
         	RemoteControlGen3Result remoteControlResult = objectMapper.readValue(data.toString(), RemoteControlGen3Result.class);
@@ -110,13 +114,18 @@ public class Remote1402Message implements RemoteProcessor {
  			//System.out.println("remoteControlResult.getCorrelation_id() "+remoteControlResult.getCorrelation_id());
  			
  			System.out.println("probeMap "+probeMap);
- 		
+ 			for (Map.Entry<String, Object> entry : probeMap.entrySet()) {
+			    props.setProperty(entry.getKey(), String.valueOf(entry.getValue()));
+			}	
+			   carProbePayload = CarProbePayload.builder().props(props).build();
+
               // TODO: Fetch CarProbe data from DB
             
             
         } catch (JsonProcessingException exception) {
 //            log.error("Exception occurred while processing message: ", exception);
         }
+		return carProbePayload;
     }
 
    

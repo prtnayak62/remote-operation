@@ -1,0 +1,24 @@
+{
+    "rules": [
+        {
+            "ruleType": "200000",
+            "ruleID": "200002",
+            "name": "G2-Remote501CTimerReset",
+            "description": "Rule to detect Trip Start",
+            "target": {},
+            "condition": [
+                {
+                    "attribute": "message_id",
+                    "operator": "EQ",
+                    "value": "FT501C"
+                }
+            ],
+            "methodCondition": true,
+            "action": {
+                "exec": {
+                    "complexMethodClass": "com.ibm.autoconnect.rule.action.RemoteOperationResetTimer"
+                }
+            }
+        }
+    ]
+}

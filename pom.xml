@@ -84,6 +84,12 @@
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>com.ibm.autoconnect.rule</groupId>
+			<artifactId>remote-rule-engine-lib</artifactId>
+			<version>0.0.1</version>
+		</dependency>
+		
 	</dependencies>
 
 	<build>

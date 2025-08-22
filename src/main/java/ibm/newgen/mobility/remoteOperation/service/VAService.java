@@ -7,19 +7,21 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import ibm.newgen.mobility.remoteOperation.config.CouchbaseProperties;
+import ibm.newgen.mobility.remoteOperation.utils.MSILConstants;
 
 @Service
-public class CarProbeService {
+public class VAService {
 
     private final Cluster cluster;
     private final Bucket bucket;
 
-    public CarProbeService(CouchbaseProperties couchbaseProperties) {
+    public VAService(CouchbaseProperties couchbaseProperties) {
         // Connect using env variable values
         this.cluster = Cluster.connect(
                 couchbaseProperties.getConnectionString(),
@@ -78,4 +80,68 @@ public class CarProbeService {
             throw new RuntimeException("Error updating doc: " + docId, e);
         }
     }
+    
+private void setRemoteProps(String docId,String transcationid) {
+	 Collection collection = bucket.scope("dev").collection("va-state");
+	 HashMap<String,Object> probeMap = new HashMap<>();
+     // Step 1: Fetch existing doc
+     GetResult result = collection.get(docId+'#'+transcationid);
+	//
+		
+			JsonObject existingDoc = result.contentAsObject();
+			 String operationType = existingDoc.getString("operationType");
+			 MSILConstants.REMOTEOPS ops[] = MSILConstants.REMOTEOPS.values();
+				
+			
+							//System.out.println("Contents of the enum are: " + MSILConstants.REMOTEOPS.values());
+						// Iterating enum using the for loop
+						for (MSILConstants.REMOTEOPS op : ops) {
+
+							 String requestKey = op.name() + "RequestTime";
+						        if (existingDoc.containsKey(requestKey) && existingDoc.get(requestKey) != null) {
+						        	probeMap.put(requestKey, existingDoc.get(requestKey).toString());
+						        }
+
+						        // responseTime key
+						        String responseKey = op.name() + "ResponseTime";
+						        if (existingDoc.containsKey(responseKey) && existingDoc.get(responseKey) != null) {
+						        	probeMap.put(responseKey, existingDoc.get(responseKey).toString());
+						        }
+						}
+						 if (existingDoc.get("ACReturnCd") != null) {
+							 probeMap.put("ACReturnCd", existingDoc.get("ACReturnCd").toString());
+						 }
+						 if (existingDoc.get("DefrosterReturnCd") != null) {
+							 probeMap.put("DefrosterReturnCd", existingDoc.get("DefrosterReturnCd").toString());
+						 }
+
+						 if (existingDoc.get("DefoggerReturnCd") != null) {
+							 probeMap.put("DefoggerReturnCd", existingDoc.get("DefoggerReturnCd").toString());
+						 }
+						 if (existingDoc.get("FrontDriverSeatVentilationReturnCd") != null) {
+							 probeMap.put("FrontDriverSeatVentilationReturnCd", existingDoc.get("FrontDriverSeatVentilationReturnCd").toString());
+						 }
+						 if (existingDoc.get("FrontPassengerSeatVentilationReturnCd") != null) {
+							 probeMap.put("FrontPassengerSeatVentilationReturnCd", existingDoc.get("FrontPassengerSeatVentilationReturnCd").toString());
+						 }
+
+						 if (existingDoc.get("RearDriverSeatVentilationReturnCd") != null) {
+							 probeMap.put("RearDriverSeatVentilationReturnCd", existingDoc.get("RearDriverSeatVentilationReturnCd").toString());
+						 }
+						 if (existingDoc.get("RearPassengerSeatVentilationReturnCd") != null) {
+							 probeMap.put("RearPassengerSeatVentilationReturnCd", existingDoc.get("RearPassengerSeatVentilationReturnCd").toString());
+						 }
+
+						 if (existingDoc.get("RemoteReturnCd") != null) {
+							 probeMap.put("RemoteReturnCd", existingDoc.get("RemoteReturnCd").toString());
+						 }
+						 if (existingDoc.get("Temprature") != null) {
+							 probeMap.put("Temprature", existingDoc.get("Temprature").toString());
+						 }
+
+						
+}
+			
+	
+
 }

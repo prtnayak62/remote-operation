@@ -3,6 +3,7 @@ package ibm.newgen.mobility.remoteOperation.service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibm.autoconnect.rule.model.CarProbePayload;
 
 import ibm.newgen.mobility.remoteOperation.model.CarProbe;
 import ibm.newgen.mobility.remoteOperation.model.RemoteControlCallback;
@@ -31,9 +33,11 @@ public class Remote501CMessage implements RemoteProcessor {
     
 
     @Override
-    public void processMessage(JSONObject data) {
+    public CarProbePayload processMessage(JSONObject data) {
     	HashMap<String,Object> probeMap = new HashMap<>();
-
+    	Properties props = new Properties();
+    	CarProbePayload carProbePayload=new CarProbePayload();
+        
     	
         try {
         	RemoteControlCallback remoteControlResult = objectMapper.readValue(data.toString(),
@@ -49,8 +53,7 @@ public class Remote501CMessage implements RemoteProcessor {
 			}
 			String carProbeData = carProbeService.getCarProbeById(remoteControlResult.getVin());
 	        System.out.println("CarProbe Data: " + carProbeData);
-
-			if(remoteControlResult.getRemoteControlResult()!=null) {
+	       if(remoteControlResult.getRemoteControlResult()!=null) {
 
 				probeMap.put("OccurrenceTime", RemoteUtils.getFormattedEventDate(remoteControlResult.getRemoteControlResult().getOccurrenceTime()));
 				probeMap.put("DcmDormantDatetime", RemoteUtils.getFormattedEventDate(remoteControlResult.getRemoteControlResult().getDcmDormantDatetime()));
@@ -71,12 +74,20 @@ public class Remote501CMessage implements RemoteProcessor {
 				probeMap.put("RemoteHvacResultParameter1", remoteControlResult.getRemoteControlResult().getRemoteHvacResultParameter1());
 				probeMap.put("RemoteHvacResultParameter2", remoteControlResult.getRemoteControlResult().getRemoteHvacResultParameter2());
 				
-				probeMap.put("sensing.longitude", remoteControlResult.getRemoteControlResult().getPositionInfo().getLongitude());
-				probeMap.put("sensing.latitude", remoteControlResult.getRemoteControlResult().getPositionInfo().getLatitude());			
+				probeMap.put("longitude", remoteControlResult.getRemoteControlResult().getPositionInfo().getLongitude());
+				probeMap.put("latitude", remoteControlResult.getRemoteControlResult().getPositionInfo().getLatitude());			
+				probeMap.put("ts", RemoteUtils.getFormattedEventDate(remoteControlResult.getTscgwtime()));
 
-				probeMap.put("sensing.stimestamp",RemoteUtils.getFormattedPOSDate(remoteControlResult.getRemoteControlResult().getOccurrenceTime()));
+				probeMap.put("xtransactionid", remoteControlResult.getXtransactionid());
+				probeMap.put("timestamp",RemoteUtils.getFormattedPOSDate(remoteControlResult.getRemoteControlResult().getOccurrenceTime()));
 				log.info("probeMap: " + probeMap);
-			
+				
+				carProbeService.mergeAndUpdateDocument(remoteControlResult.getVin(), probeMap);
+				for (Map.Entry<String, Object> entry : probeMap.entrySet()) {
+				    props.setProperty(entry.getKey(), String.valueOf(entry.getValue()));
+				}	
+				   carProbePayload = CarProbePayload.builder().props(props).build();
+
 			}
               // TODO: Fetch CarProbe data from DB
             
@@ -84,16 +95,17 @@ public class Remote501CMessage implements RemoteProcessor {
         } catch (JsonProcessingException exception) {
 //            log.error("Exception occurred while processing message: ", exception);
         }
+		return carProbePayload;
     }
 
    
     
     protected  HashMap<String,Object> populateCommonHeader(VehicleInputPayload vehicleInputPayload, HashMap<String,Object> probeMap) {
     	
-		probeMap.put("message_id", vehicleInputPayload.getMessageId());
+		probeMap.put("messageId", vehicleInputPayload.getMessageId());
 		probeMap.put("action", "SEND_CARPROBE");
 
-		probeMap.put("IMEI", vehicleInputPayload.getVin());
+		probeMap.put("imei", vehicleInputPayload.getVin());
 
 		probeMap.put("vehicle_id", "DEFREG:"+vehicleInputPayload.getVin());
 		probeMap.put("res", "sync");
