@@ -3,7 +3,7 @@ spring:
     name: remote-mngr-service
 
 couchbase-properties:
-  credentials: "${COUCHBASE_CREDENTIALS}"
+  credentials: ${COUCHBASE_CREDENTIALS}
   bucket: ${COUCHBASE_BUCKET}
 
 logging:
