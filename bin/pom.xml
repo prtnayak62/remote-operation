@@ -8,7 +8,7 @@
 		<version>3.5.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>ibm.newgen.mobility.remotemgmt</groupId>
+	<groupId>com.ibm.autoconnect.remotemgmt</groupId>
 	<artifactId>remote-operation-service</artifactId>
 	<version>0.0.1</version>
 	<name>remote-operation-service</name>
