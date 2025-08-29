@@ -10,6 +10,10 @@ package com.ibm.autoconnect.utils;
 
 public class MSILConstants {
 
+	public static final String RETURN_CODE     = "ReturnCd";
+
+	public static final String IS_NOTIFIED     = "IsNotified";
+	public static final String OPERATION_TYPE     = "OperationType";
 
 	public static final String ISO_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 
@@ -17,7 +21,8 @@ public class MSILConstants {
 	public static final String REQ_ISO_DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
 	
-
+	public static final String REMOTECALLRESET_ACTION = "SEND_REMOTERESULT";
+	
 	public static final String REMOTERESULT_EVENT     = "FT501C";
 
 	public static final String REMOTERESULTGEN3_EVENT     = "SSPICN1402";

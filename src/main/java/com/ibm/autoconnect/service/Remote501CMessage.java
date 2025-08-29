@@ -106,8 +106,7 @@ public class Remote501CMessage implements RemoteProcessor {
 		probeMap.put("message_id", vehicleInputPayload.getMessageId());
 		probeMap.put("action", "SEND_CARPROBE");
 
-		probeMap.put("imei", vehicleInputPayload.getVin());
-
+		probeMap.put("vinId", vehicleInputPayload.getVin());
 		probeMap.put("vehicle_id", "DEFREG:"+vehicleInputPayload.getVin());
 		probeMap.put("res", "sync");
 

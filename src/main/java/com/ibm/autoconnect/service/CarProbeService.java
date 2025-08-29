@@ -33,7 +33,7 @@ public class CarProbeService {
 
     public String getCarProbeById(String documentId) {
         try {
-            Collection collection = bucket.scope("dev").collection("car-probe"); // adjust if scope/collection differ
+            Collection collection = bucket.scope("core").collection("car-probe"); // adjust if scope/collection differ
             GetResult result = collection.get(documentId);
             return result.contentAsObject().toString();
         } catch (Exception e) {
@@ -43,7 +43,7 @@ public class CarProbeService {
     
     public void mergeAndUpdateDocument(String docId, Map<String, Object> incomingData) {
         try {
-            Collection collection = bucket.scope("dev").collection("car-probe");
+            Collection collection = bucket.scope("core").collection("car-probe");
 
             // Step 1: Fetch existing doc
             GetResult result = collection.get(docId);

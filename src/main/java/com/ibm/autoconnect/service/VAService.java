@@ -35,7 +35,7 @@ public class VAService {
 
     public String getCarProbeById(String documentId) {
         try {
-            Collection collection = bucket.scope("dev").collection("car-probe"); // adjust if scope/collection differ
+            Collection collection = bucket.scope("core").collection("car-probe"); // adjust if scope/collection differ
             GetResult result = collection.get(documentId);
             return result.contentAsObject().toString();
         } catch (Exception e) {
@@ -45,7 +45,7 @@ public class VAService {
     
     public void mergeAndUpdateDocument(String docId, Map<String, Object> incomingData) {
         try {
-            Collection collection = bucket.scope("dev").collection("car-probe");
+            Collection collection = bucket.scope("core").collection("car-probe");
 
             // Step 1: Fetch existing doc
             GetResult result = collection.get(docId);
@@ -81,65 +81,55 @@ public class VAService {
         }
     }
     
-private void setRemoteProps(String docId,String transcationid) {
-	 Collection collection = bucket.scope("dev").collection("va-state");
-	 HashMap<String,Object> probeMap = new HashMap<>();
-     // Step 1: Fetch existing doc
-     GetResult result = collection.get(docId+'#'+transcationid);
-	//
-		
-			JsonObject existingDoc = result.contentAsObject();
-			 String operationType = existingDoc.getString("operationType");
-			 MSILConstants.REMOTEOPS ops[] = MSILConstants.REMOTEOPS.values();
-				
-			
-							//System.out.println("Contents of the enum are: " + MSILConstants.REMOTEOPS.values());
-						// Iterating enum using the for loop
-						for (MSILConstants.REMOTEOPS op : ops) {
+public void setRemoteProps(String docId,String transcationid) {
+	Collection collection = bucket.scope("core").collection("va-state");
+HashMap<String, Object> probeMap = new HashMap<>();
 
-							 String requestKey = op.name() + "RequestTime";
-						        if (existingDoc.containsKey(requestKey) && existingDoc.get(requestKey) != null) {
-						        	probeMap.put(requestKey, existingDoc.get(requestKey).toString());
-						        }
+//Step 1: Fetch existing doc
+GetResult result = collection.get(docId + "#" + transcationid);
+JsonObject existingDoc = result.contentAsObject();
 
-						        // responseTime key
-						        String responseKey = op.name() + "ResponseTime";
-						        if (existingDoc.containsKey(responseKey) && existingDoc.get(responseKey) != null) {
-						        	probeMap.put(responseKey, existingDoc.get(responseKey).toString());
-						        }
-						}
-						 if (existingDoc.get("ACReturnCd") != null) {
-							 probeMap.put("ACReturnCd", existingDoc.get("ACReturnCd").toString());
-						 }
-						 if (existingDoc.get("DefrosterReturnCd") != null) {
-							 probeMap.put("DefrosterReturnCd", existingDoc.get("DefrosterReturnCd").toString());
-						 }
+//--- Extract operationType ---
+String operationType = existingDoc.getString("operationType");
 
-						 if (existingDoc.get("DefoggerReturnCd") != null) {
-							 probeMap.put("DefoggerReturnCd", existingDoc.get("DefoggerReturnCd").toString());
-						 }
-						 if (existingDoc.get("FrontDriverSeatVentilationReturnCd") != null) {
-							 probeMap.put("FrontDriverSeatVentilationReturnCd", existingDoc.get("FrontDriverSeatVentilationReturnCd").toString());
-						 }
-						 if (existingDoc.get("FrontPassengerSeatVentilationReturnCd") != null) {
-							 probeMap.put("FrontPassengerSeatVentilationReturnCd", existingDoc.get("FrontPassengerSeatVentilationReturnCd").toString());
-						 }
+//--- Extract REMOTEOPS request/response times ---
+MSILConstants.REMOTEOPS ops[] = MSILConstants.REMOTEOPS.values();
+for (MSILConstants.REMOTEOPS op : ops) {
+ String requestKey = op.name() + "RequestTime";
+ String responseKey = op.name() + "ResponseTime";
 
-						 if (existingDoc.get("RearDriverSeatVentilationReturnCd") != null) {
-							 probeMap.put("RearDriverSeatVentilationReturnCd", existingDoc.get("RearDriverSeatVentilationReturnCd").toString());
-						 }
-						 if (existingDoc.get("RearPassengerSeatVentilationReturnCd") != null) {
-							 probeMap.put("RearPassengerSeatVentilationReturnCd", existingDoc.get("RearPassengerSeatVentilationReturnCd").toString());
-						 }
+ if (existingDoc.containsKey(requestKey) && existingDoc.get(requestKey) != null) {
+     probeMap.put(requestKey, existingDoc.get(requestKey).toString());
+ }
+ if (existingDoc.containsKey(responseKey) && existingDoc.get(responseKey) != null) {
+     probeMap.put(responseKey, existingDoc.get(responseKey).toString());
+ }
+}
 
-						 if (existingDoc.get("RemoteReturnCd") != null) {
-							 probeMap.put("RemoteReturnCd", existingDoc.get("RemoteReturnCd").toString());
-						 }
-						 if (existingDoc.get("Temprature") != null) {
-							 probeMap.put("Temprature", existingDoc.get("Temprature").toString());
-						 }
+//--- Extract responseTime JSON ---
+if (existingDoc.containsKey("responseTime")) {
+ JsonObject responseTimeObj = existingDoc.getObject("responseTime");
+ for (String key : responseTimeObj.getNames()) {
+     probeMap.put(key, responseTimeObj.get(key).toString());
+ }
+}
 
-						
+
+String[] returnCodes = {
+ "ACReturnCd", "DefrosterReturnCd", "DefoggerReturnCd",
+ "FrontDriverSeatVentilationReturnCd", "FrontPassengerSeatVentilationReturnCd",
+ "RearDriverSeatVentilationReturnCd", "RearPassengerSeatVentilationReturnCd",
+ "RemoteReturnCd", "Temprature"
+};
+
+for (String field : returnCodes) {
+ if (existingDoc.containsKey(field) && existingDoc.get(field) != null) {
+     probeMap.put(field, existingDoc.get(field).toString());
+ }
+}
+mergeAndUpdateDocument(docId,probeMap);
+//Now probeMap has both root + nested responseTime values
+System.out.println("Final probeMap => " + probeMap);
 }
 			
 	
