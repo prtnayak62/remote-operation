@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.autoconnect.model.CarProbe;
-import com.ibm.autoconnect.model.RemoteControlCallback;
 import com.ibm.autoconnect.model.RemoteControlGen3Result;
 import com.ibm.autoconnect.repository.VehicleInputPayload;
 import com.ibm.autoconnect.rule.model.CarProbePayload;
+import com.ibm.autoconnect.utils.MSILConstants;
 import com.ibm.autoconnect.utils.RemoteUtils;
 
 
@@ -25,9 +25,11 @@ import lombok.extern.slf4j.Slf4j;
 public class Remote1402Message implements RemoteProcessor {
 
     private final ObjectMapper objectMapper;
+	private final CarProbeService carProbeService;
 
-    public Remote1402Message(ObjectMapper objectMapper) {
+    public Remote1402Message(ObjectMapper objectMapper,CarProbeService carProbeService) {
         this.objectMapper = objectMapper;
+        this.carProbeService=carProbeService;
     }
 
     @Override
@@ -49,6 +51,9 @@ public class Remote1402Message implements RemoteProcessor {
  			}
  			probeMap.put("RequestStatus", remoteControlResult.getRequestStatus());
  			probeMap.put("RequestType", remoteControlResult.getRequestType());
+ 			String carProbeData = carProbeService.getCarProbeById(remoteControlResult.getVin()+"#"+MSILConstants.REMOTEOPS);
+	        System.out.println("CarProbe Data: " + carProbeData);
+	      
  				if(remoteControlResult.getRequestStatus() != null && remoteControlResult.getRequestStatus().equalsIgnoreCase("ResponseSuccess")) {
  				probeMap.put("Status", "0");
  			}else if(remoteControlResult.getRequestStatus() != null && remoteControlResult.getRequestStatus().equalsIgnoreCase("ResponseFailure")){
@@ -119,7 +124,11 @@ public class Remote1402Message implements RemoteProcessor {
 			    props.setProperty(entry.getKey(), String.valueOf(entry.getValue()));
 			}	
 			   carProbePayload = CarProbePayload.builder().props(props).build();
-
+			   carProbeService.mergeAndUpdateDocument(remoteControlResult.getVin()+"#"+MSILConstants.REMOTEOPS, probeMap);
+				for (Map.Entry<String, Object> entry : probeMap.entrySet()) {
+				    props.setProperty(entry.getKey(), String.valueOf(entry.getValue()));
+				}	
+				   carProbePayload = CarProbePayload.builder().props(props).build();
               // TODO: Fetch CarProbe data from DB
             
             
@@ -136,10 +145,11 @@ public class Remote1402Message implements RemoteProcessor {
 		probeMap.put("message_id", vehicleInputPayload.getMessageId());
 		probeMap.put("action", "SEND_CARPROBE");
 
-		probeMap.put("IMEI", vehicleInputPayload.getVin());
+		probeMap.put("vinId", vehicleInputPayload.getVin());
 
 		probeMap.put("vehicle_id", "DEFREG:"+vehicleInputPayload.getVin());
 		probeMap.put("res", "sync");
+		
 
 		//Vehicle vehicle = config.getVm().getfromExternalID("DEFREG:"+vehicleInputPayload.getVin());
 

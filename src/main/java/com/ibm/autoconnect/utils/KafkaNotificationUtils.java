@@ -4,18 +4,18 @@ import java.util.HashMap;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.springframework.stereotype.Component;
-
 import com.ibm.autoconnect.rule.action.Action;
 import com.ibm.autoconnect.rule.model.CarProbePayload;
 
 import lombok.extern.slf4j.Slf4j;
 
-@Component
 @Slf4j
 public class KafkaNotificationUtils {
-	
-	 public void sendRemoteOperationNotification(CarProbePayload cb, Action action) {
+
+	 private KafkaNotificationUtils() {
+    }
+
+	 public static void sendRemoteOperationNotification(CarProbePayload cb, Action action) {
 
 			//DevLogger.info("--------------------inside sendAlertNotification--------------");
 			JSONObject obj = new JSONObject();
@@ -172,7 +172,7 @@ public class KafkaNotificationUtils {
 		}
 	 
 
-		private void populateCommonJsonFields(CarProbePayload cb , JSONObject obj, HashMap<String, String> objMap) throws JSONException {
+		private static void populateCommonJsonFields(CarProbePayload cb , JSONObject obj, HashMap<String, String> objMap) throws JSONException {
 			obj.put("VIN", cb.getProps().getProperty("IMEI"));
 			if(objMap !=null && objMap.get("vehicleID")!=null) {
 				obj.put("contract_id",  objMap.get("vehicleID"));		

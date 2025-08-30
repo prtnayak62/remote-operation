@@ -9,6 +9,7 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
+import com.ibm.autoconnect.utils.MSILConstants;
 
 @Service
 public class CarProbeService {
@@ -21,7 +22,7 @@ public class CarProbeService {
     
     public String getCarProbeById(String documentId) {
         try {
-            Collection collection = bucket.scope("core").collection("car-probe"); // adjust if scope/collection differ
+            Collection collection = bucket.scope(MSILConstants.couchbaseScope).collection(MSILConstants.PROBECOLLECTIONCOUCH); // adjust if scope/collection differ
             GetResult result = collection.get(documentId);
             return result.contentAsObject().toString();
         } catch (Exception e) {
@@ -31,7 +32,7 @@ public class CarProbeService {
     
     public void mergeAndUpdateDocument(String docId, Map<String, Object> incomingData) {
         try {
-            Collection collection = bucket.scope("core").collection("car-probe");
+            Collection collection = bucket.scope(MSILConstants.couchbaseScope).collection(MSILConstants.PROBECOLLECTIONCOUCH);
 
             // Step 1: Fetch existing doc
             GetResult result = collection.get(docId);

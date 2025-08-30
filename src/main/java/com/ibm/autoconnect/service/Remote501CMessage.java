@@ -15,6 +15,7 @@ import com.ibm.autoconnect.model.CarProbe;
 import com.ibm.autoconnect.model.RemoteControlCallback;
 import com.ibm.autoconnect.repository.VehicleInputPayload;
 import com.ibm.autoconnect.rule.model.CarProbePayload;
+import com.ibm.autoconnect.utils.MSILConstants;
 import com.ibm.autoconnect.utils.RemoteUtils;
 
 
@@ -52,7 +53,7 @@ public class Remote501CMessage implements RemoteProcessor {
 			probeMap.put("Status", remoteControlResult.getRequestResult().getStatus());
 			probeMap.put("Phase", remoteControlResult.getRequestResult().getPhase());
 			}
-			String carProbeData = carProbeService.getCarProbeById(remoteControlResult.getVin());
+			String carProbeData = carProbeService.getCarProbeById(remoteControlResult.getVin()+"#"+MSILConstants.REMOTEOPS);
 	        System.out.println("CarProbe Data: " + carProbeData);
 	       if(remoteControlResult.getRemoteControlResult()!=null) {
 
@@ -83,7 +84,7 @@ public class Remote501CMessage implements RemoteProcessor {
 				probeMap.put("timestamp",RemoteUtils.getFormattedPOSDate(remoteControlResult.getRemoteControlResult().getOccurrenceTime()));
 				log.info("probeMap: " + probeMap);
 				
-				carProbeService.mergeAndUpdateDocument(remoteControlResult.getVin(), probeMap);
+				carProbeService.mergeAndUpdateDocument(remoteControlResult.getVin()+"#"+MSILConstants.REMOTEOPS, probeMap);
 				for (Map.Entry<String, Object> entry : probeMap.entrySet()) {
 				    props.setProperty(entry.getKey(), String.valueOf(entry.getValue()));
 				}	
