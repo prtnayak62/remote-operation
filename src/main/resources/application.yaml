@@ -22,4 +22,4 @@ logging:
     org.springframework.web: DEBUG
 
 server:
-  port: 8081
+  port: 9090

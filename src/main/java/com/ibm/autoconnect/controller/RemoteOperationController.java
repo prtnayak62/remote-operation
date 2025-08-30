@@ -1,6 +1,6 @@
 package com.ibm.autoconnect.controller;
 
-import java.util.Map;
+import java.util.List;
 
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +28,7 @@ public class RemoteOperationController {
 
 
     @PostMapping("/remoteac")
-    public ResponseEntity<?> remoteAc(@RequestBody Map<String, Object> data) {
+    public ResponseEntity<?> remoteAc(@RequestBody List<String> data) {
         log.info("Received Data: " + data);
         RemoteResponseModel model = remoteService.processRemote(data);
         return new ResponseEntity<>(model, HttpStatusCode.valueOf(200));
