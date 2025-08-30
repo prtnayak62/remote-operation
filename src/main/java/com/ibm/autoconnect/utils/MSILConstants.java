@@ -26,8 +26,13 @@ public class MSILConstants {
 	public static final String REMOTERESULT_EVENT     = "FT501C";
 
 	public static final String REMOTERESULTGEN3_EVENT     = "SSPICN1402";
+	public static final String couchbaseScope     = "core";
+	public static final String PROBECOLLECTIONCOUCH     = "car-probe";
+	public static final String VASTATE     = "va-state";
+	public static final String REMOTEOPS     = "remoteops";
 	
-	public enum REMOTEOPS {
+	
+	public enum REMOTEOP {
 		ACEngineON,DefrosterEngineON,DefoggerEngineON,
 		ACON,ACOFF,DefrosterON,DefrosterOFF,DefoggerON,DefoggerOFF,ACEngineOFF,DefrosterEngineOFF,FrontDriverSeatVentilationON,FrontDriverSeatVentilationOFF,
 		FrontPassengerSeatVentilationON,FrontPassengerSeatVentilationOFF,DefoggerEngineOFF,ACTempChange,

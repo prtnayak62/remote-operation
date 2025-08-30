@@ -35,7 +35,7 @@ public class VAService {
 
     public String getCarProbeById(String documentId) {
         try {
-            Collection collection = bucket.scope("core").collection("car-probe"); // adjust if scope/collection differ
+            Collection collection = bucket.scope(MSILConstants.couchbaseScope).collection(MSILConstants.PROBECOLLECTIONCOUCH); // adjust if scope/collection differ
             GetResult result = collection.get(documentId);
             return result.contentAsObject().toString();
         } catch (Exception e) {
@@ -45,7 +45,7 @@ public class VAService {
     
     public void mergeAndUpdateDocument(String docId, Map<String, Object> incomingData) {
         try {
-            Collection collection = bucket.scope("core").collection("car-probe");
+            Collection collection = bucket.scope(MSILConstants.couchbaseScope).collection(MSILConstants.PROBECOLLECTIONCOUCH);
 
             // Step 1: Fetch existing doc
             GetResult result = collection.get(docId);
@@ -82,7 +82,7 @@ public class VAService {
     }
     
 public void setRemoteProps(String docId,String transcationid) {
-	Collection collection = bucket.scope("core").collection("va-state");
+	Collection collection = bucket.scope(MSILConstants.couchbaseScope).collection(MSILConstants.VASTATE);
 HashMap<String, Object> probeMap = new HashMap<>();
 
 //Step 1: Fetch existing doc
@@ -93,8 +93,8 @@ JsonObject existingDoc = result.contentAsObject();
 String operationType = existingDoc.getString("operationType");
 
 //--- Extract REMOTEOPS request/response times ---
-MSILConstants.REMOTEOPS ops[] = MSILConstants.REMOTEOPS.values();
-for (MSILConstants.REMOTEOPS op : ops) {
+MSILConstants.REMOTEOP ops[] = MSILConstants.REMOTEOP.values();
+for (MSILConstants.REMOTEOP op : ops) {
  String requestKey = op.name() + "RequestTime";
  String responseKey = op.name() + "ResponseTime";
 
@@ -127,7 +127,7 @@ for (String field : returnCodes) {
      probeMap.put(field, existingDoc.get(field).toString());
  }
 }
-mergeAndUpdateDocument(docId,probeMap);
+mergeAndUpdateDocument(docId+"#"+MSILConstants.REMOTEOPS,probeMap);
 //Now probeMap has both root + nested responseTime values
 System.out.println("Final probeMap => " + probeMap);
 }

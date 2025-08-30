@@ -29,17 +29,16 @@ public class RemoteService {
     private final RulesEngineProcessor rulesEngineProcessor;
     private final RemoteRulesLoader tripRulesLoader;
     private final VAService vaService;
-    private final KafkaNotificationUtils kafkaNotificationUtils;
     
 	
 
-    public RemoteService(VAService vaService,ObjectMapper objectMapper, ApplicationContext context,RulesEngineProcessor rulesEngineProcessor,RemoteRulesLoader tripRulesLoader,KafkaNotificationUtils kafkaNotificationUtils) {
+    public RemoteService(VAService vaService,ObjectMapper objectMapper, ApplicationContext context,RulesEngineProcessor rulesEngineProcessor,RemoteRulesLoader tripRulesLoader) {
         this.objectMapper = objectMapper;
         this.context = context;
         this.rulesEngineProcessor=rulesEngineProcessor;
         this.tripRulesLoader= tripRulesLoader;
         this.vaService=vaService;
-        this.kafkaNotificationUtils=kafkaNotificationUtils;
+        
     }
 
     public RemoteResponseModel processRemote(Object data) {
@@ -86,7 +85,7 @@ public class RemoteService {
             if(String.valueOf(act.getActionId()).equalsIgnoreCase(MSILConstants.REMOTECALLRESET_ACTION)) {
             	
             	vaService.setRemoteProps(carProbePayload.getProps().getProperty(VIN_ID),carProbePayload.getProps().getProperty("xtransactionid"));
-            	kafkaNotificationUtils.sendRemoteOperationNotification(carProbePayload,act);
+            	KafkaNotificationUtils.sendRemoteOperationNotification(carProbePayload,act);
             }
             }
     }   
