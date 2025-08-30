@@ -2,24 +2,19 @@ package com.ibm.autoconnect.utils;
 
 import java.util.HashMap;
 
-import javax.xml.bind.DatatypeConverter;
-
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.autoconnect.rule.action.Action;
 import com.ibm.autoconnect.rule.model.CarProbePayload;
 
-import ch.qos.logback.classic.Logger;
-
 import lombok.extern.slf4j.Slf4j;
 
+@Component
 @Slf4j
 public class KafkaNotificationUtils {
-	 private KafkaNotificationUtils() {
-    }
-
+	
 	 public void sendRemoteOperationNotification(CarProbePayload cb, Action action) {
 
 			//DevLogger.info("--------------------inside sendAlertNotification--------------");

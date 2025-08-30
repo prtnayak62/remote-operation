@@ -23,7 +23,7 @@ import java.util.Properties;
 @Slf4j
 @Service
 public class RemoteService {
-	@Autowired
+	
     private final ApplicationContext context;
     private final ObjectMapper objectMapper;
     private final RulesEngineProcessor rulesEngineProcessor;

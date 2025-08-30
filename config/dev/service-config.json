@@ -25,7 +25,7 @@
     "TaskCpu":  512,
     "ResourceAccess":  {
                            "NeedsDynamoDB":  false,
-                           "NeedsMSK":  false,
+                           "NeedsMSK":  true,
                            "NeedsDatabase":  false,
                            "NeedsSNS":  false,
                            "NeedsRedis":  false,
@@ -35,5 +35,8 @@
     "MinCapacity":  1,
     "MaxCapacity":  5,
     "DesiredCount":  1,
-    "APIGroupName":  ""
+    "APIGroupName":  "",
+    "CouchbaseSecretArn": "arn:aws:secretsmanager:us-east-2:868377967295:secret:dev/couchbase/autoconnect/newgen/credentials-9UWkJE",
+    "CouchbaseBucket": "newgen",
+    "KafkaIamUrlArn": "arn:aws:ssm:us-east-2:868377967295:parameter/dev/msk/dev-msk-serverless/iam-url"
 }

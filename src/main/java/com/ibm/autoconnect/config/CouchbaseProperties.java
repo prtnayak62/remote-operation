@@ -1,49 +1,50 @@
 package com.ibm.autoconnect.config;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
+import java.util.Objects;
+
+import org.json.JSONObject;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@ConfigurationProperties(prefix = "couchbase-properties")
+@Setter
+@Getter
 @Component
 public class CouchbaseProperties {
 
-    private final String connectionString;
-    private final String username;
-    private final String password;
-    private final String bucket;
+	private String credentials;
+	private String bucket;
 
-    public CouchbaseProperties(
-            @Value("${couchbase-properties.credentials}") String credentialsJson,
-            @Value("${couchbase-properties.bucket}") String bucket
-    ) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode node = mapper.readTree(credentialsJson);
+	protected String getUsername() {
+		if (Objects.nonNull(this.getCredentials())) {
+			JSONObject obj = new JSONObject(this.getCredentials());
+			if (!obj.isEmpty()) {
+				return obj.getString("username");
+			}
+		}
+		return null;
+	}
 
-            this.connectionString = node.get("connectionString").asText();
-            this.username = node.get("username").asText();
-            this.password = node.get("password").asText();
-            this.bucket = bucket;
+	protected String getPassword() {
+		if (Objects.nonNull(this.getCredentials())) {
+			JSONObject obj = new JSONObject(this.getCredentials());
+			if (!obj.isEmpty()) {
+				return obj.getString("password");
+			}
+		}
+		return null;
+	}
 
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Couchbase credentials JSON", e);
-        }
-    }
-
-    public String getConnectionString() {
-        return connectionString;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public String getBucket() {
-        return bucket;
-    }
+	protected String getConnectionString() {
+		if (Objects.nonNull(this.getCredentials())) {
+			JSONObject obj = new JSONObject(this.getCredentials());
+			if (!obj.isEmpty()) {
+				return obj.getString("connectionString");
+			}
+		}
+		return null;
+	}
 }

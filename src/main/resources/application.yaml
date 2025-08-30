@@ -2,6 +2,16 @@ spring:
   application:
     name: remote-mngr-service
 
+kafka-properties:
+  application-id: remote-mngr-service
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_URLS}
+  notification-topic: ${NOTIFICATION_TOPIC}
+  security-protocol: SASL_SSL
+  sasl-mechanism: AWS_MSK_IAM
+  sasl-jaas-config: software.amazon.msk.auth.iam.IAMLoginModule required;
+  sasl-client-callback-handler-class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
+  
+  
 couchbase-properties:
   credentials: ${COUCHBASE_CREDENTIALS}
   bucket: ${COUCHBASE_BUCKET}

@@ -1,43 +1,64 @@
 package com.ibm.autoconnect.config;
 
-import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.Bucket;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.convert.CustomConversions;
+import org.springframework.data.couchbase.config.AbstractCouchbaseConfiguration;
 
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.env.ClusterEnvironment;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Configuration
-public class CouchbaseConfiguration {
+public class CouchbaseConfiguration extends AbstractCouchbaseConfiguration {
 
-    @Value("${couchbase-properties.credentials}")
-    private String credentialsJson;
-
-    @Value("${couchbase-properties.bucket}")
-    private String bucketName;
-
-    @Bean
-    public ClusterEnvironment couchbaseEnvironment() {
-        return ClusterEnvironment.builder().build();
+    private final CouchbaseProperties couchbaseProperties;
+    
+    public CouchbaseConfiguration(CouchbaseProperties couchbaseProperties) {
+    	this.couchbaseProperties = couchbaseProperties;
     }
 
-    @Bean
-    public Cluster couchbaseCluster(ClusterEnvironment environment) throws Exception {
-        // Parse JSON string from environment variable
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode creds = mapper.readTree(credentialsJson);
-
-        String username = creds.get("username").asText();
-        String password = creds.get("password").asText();
-        String connectionString = creds.get("connectionString").asText();
-
-        return Cluster.connect(connectionString, username, password);
+    @Override
+    public String getBucketName() {
+    	log.info("Bucket to connect {}", couchbaseProperties.getBucket());
+        return couchbaseProperties.getBucket();
     }
 
+    @Override
+    public String getConnectionString() {
+    	log.info("ConnectionString to connect {}", couchbaseProperties.getConnectionString());
+        return couchbaseProperties.getConnectionString();
+    }
+
+    @Override
+    public String getPassword() {
+    	log.info("Password to connect {}", couchbaseProperties.getPassword());
+        return couchbaseProperties.getPassword();
+    }
+
+    @Override
+    public String getUserName() {
+    	log.info("Username to connect {}", couchbaseProperties.getUsername());
+        return couchbaseProperties.getUsername();
+    }
+    
+    
+    @Override
+	public ClusterEnvironment couchbaseClusterEnvironment() {
+		return ClusterEnvironment.builder().securityConfig(s -> s.enableTls(true)).build();
+	}
+    
+    @Override
     @Bean
-    public Bucket couchbaseBucket(Cluster cluster) {
-        return cluster.bucket(bucketName);
+    public CustomConversions customConversions() {
+          return super.customConversions();
+    }
+    
+    @Bean
+    public Bucket getBucket(Cluster cluster) {
+    	return cluster.bucket(getBucketName());
     }
 }

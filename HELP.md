@@ -1,7 +1,7 @@
 # Read Me First
 The following was discovered as part of building this project:
 
-* The original package name 'ibm.newgen.mobility.tripmgmit.trip-management-service' is invalid and this project uses 'ibm.newgen.mobility.tripmgmit.trip_management_service' instead.
+* The original package name 'ibm.newgen.mobility.tripmgmit.remote-mngr-service' is invalid and this project uses 'ibm.newgen.mobility.tripmgmit.trip_management_service' instead.
 
 # Getting Started
 
