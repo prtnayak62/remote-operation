@@ -1,11 +1,17 @@
 package com.ibm.autoconnect.service;
 
-import lombok.extern.slf4j.Slf4j;
+import static com.ibm.autoconnect.rule.constants.TripRuleConstants.VIN_ID;
+
+import java.util.List;
+import java.util.Properties;
+
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibm.autoconnect.config.KafkaProperties;
 import com.ibm.autoconnect.model.RemoteResponseModel;
 import com.ibm.autoconnect.rule.action.Action;
 import com.ibm.autoconnect.rule.model.CarProbePayload;
@@ -15,15 +21,14 @@ import com.ibm.autoconnect.utils.KafkaNotificationUtils;
 import com.ibm.autoconnect.utils.MSILConstants;
 import com.ibm.autoconnect.utils.RemoteUtils;
 
-import static com.ibm.autoconnect.rule.constants.TripRuleConstants.VIN_ID;
-
-import java.util.List;
-import java.util.Properties;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 public class RemoteService {
 	
+	private final KafkaProperties kafkaProperties;
+	private final KafkaProducer<String, String> producer;
     private final ApplicationContext context;
     private final ObjectMapper objectMapper;
     private final RulesEngineProcessor rulesEngineProcessor;
@@ -32,20 +37,21 @@ public class RemoteService {
     
 	
 
-    public RemoteService(VAService vaService,ObjectMapper objectMapper, ApplicationContext context,RulesEngineProcessor rulesEngineProcessor,RemoteRulesLoader tripRulesLoader) {
-        this.objectMapper = objectMapper;
+    public RemoteService(KafkaProperties kafkaProperties, KafkaProducer<String, String> producer, VAService vaService,ObjectMapper objectMapper, ApplicationContext context,RulesEngineProcessor rulesEngineProcessor,RemoteRulesLoader tripRulesLoader) {
+        this.kafkaProperties = kafkaProperties;
+        this.producer = producer;
+    	this.objectMapper = objectMapper;
         this.context = context;
         this.rulesEngineProcessor=rulesEngineProcessor;
         this.tripRulesLoader= tripRulesLoader;
         this.vaService=vaService;
-        
     }
 
-    public RemoteResponseModel processRemote(Object data) {
+    public RemoteResponseModel processRemote(List<String> data) {
         try {
         	String payload;
 		
-				payload = (String) RemoteUtils.convertObjectToString(data, objectMapper);
+				payload = (String) RemoteUtils.convertObjectToString(data.get(0), objectMapper);
 				JSONObject jsonObject = new JSONObject(payload);
 				RemoteProcessor remoteProcessor = null;
 				CarProbePayload carProbePayload=null;
@@ -85,7 +91,7 @@ public class RemoteService {
             if(String.valueOf(act.getActionId()).equalsIgnoreCase(MSILConstants.REMOTECALLRESET_ACTION)) {
             	
             	vaService.setRemoteProps(carProbePayload.getProps().getProperty(VIN_ID),carProbePayload.getProps().getProperty("xtransactionid"));
-            	KafkaNotificationUtils.sendRemoteOperationNotification(carProbePayload,act);
+            	KafkaNotificationUtils.sendRemoteOperationNotification(carProbePayload,act, kafkaProperties.getAlertTopic(), producer);
             }
             }
     }   

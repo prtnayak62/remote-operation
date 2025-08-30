@@ -2,8 +2,12 @@ package com.ibm.autoconnect.utils;
 
 import java.util.HashMap;
 
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import com.ibm.autoconnect.rule.action.Action;
 import com.ibm.autoconnect.rule.model.CarProbePayload;
 
@@ -15,7 +19,7 @@ public class KafkaNotificationUtils {
 	 private KafkaNotificationUtils() {
     }
 
-	 public static void sendRemoteOperationNotification(CarProbePayload cb, Action action) {
+	 public static void sendRemoteOperationNotification(CarProbePayload cb, Action action, String alertTopic, KafkaProducer<String, String> producer) {
 
 			//DevLogger.info("--------------------inside sendAlertNotification--------------");
 			JSONObject obj = new JSONObject();
@@ -169,6 +173,17 @@ public class KafkaNotificationUtils {
 			long startTimeDMM = System.currentTimeMillis();
 			//push(ALERT_TOPIC, imeiKey,msg);
 			long endTimeDMM = System.currentTimeMillis();
+			
+			log.info("Payload of KafkaNotificationUtils before sending to Kafka: {}", obj.toString());
+
+			ProducerRecord<String, String> producerRecord = new ProducerRecord<>(alertTopic,
+					imeiKey, obj.toString());
+
+			producer.send(producerRecord, (RecordMetadata metadata, Exception exception) -> {
+				if (exception != null) {
+					log.error("Error producing message: " + exception.getMessage());
+				}
+			});
 		}
 	 
 

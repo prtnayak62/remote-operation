@@ -15,6 +15,7 @@ public class KafkaProperties {
 	private String bootstrapServers;
 	private String applicationId;
 	private String securityProtocol;
+	private String alertTopic;
 	private String saslMechanism;
 	private String saslJaasConfig;
 	private String saslClientCallbackHandlerClass;

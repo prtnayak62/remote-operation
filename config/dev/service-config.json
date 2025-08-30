@@ -38,5 +38,6 @@
     "APIGroupName":  "",
     "CouchbaseSecretArn": "arn:aws:secretsmanager:us-east-2:868377967295:secret:dev/couchbase/autoconnect/newgen/credentials-9UWkJE",
     "CouchbaseBucket": "newgen",
-    "KafkaIamUrlArn": "arn:aws:ssm:us-east-2:868377967295:parameter/dev/msk/dev-msk-serverless/iam-url"
+    "KafkaIamUrlArn": "arn:aws:ssm:us-east-2:868377967295:parameter/dev/msk/dev-msk-serverless/iam-url",
+    "KafkaTopic": "private.alerts"
 }

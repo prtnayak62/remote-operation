@@ -5,7 +5,7 @@ spring:
 kafka-properties:
   application-id: remote-mngr-service
   bootstrap-servers: ${KAFKA_BOOTSTRAP_URLS}
-  notification-topic: ${NOTIFICATION_TOPIC}
+  alert-topic: ${ALERT_TOPIC}
   security-protocol: SASL_SSL
   sasl-mechanism: AWS_MSK_IAM
   sasl-jaas-config: software.amazon.msk.auth.iam.IAMLoginModule required;
