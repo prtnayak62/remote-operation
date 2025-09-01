@@ -174,7 +174,7 @@ public class KafkaNotificationUtils {
 			//push(ALERT_TOPIC, imeiKey,msg);
 			long endTimeDMM = System.currentTimeMillis();
 			
-			log.info("Payload of KafkaNotificationUtils before sending to Kafka: {}", obj.toString());
+			log.info("Payload of KafkaNotificationUtils {} before sending to Kafka Topic: {}", obj.toString(), alertTopic);
 
 			ProducerRecord<String, String> producerRecord = new ProducerRecord<>(alertTopic,
 					imeiKey, obj.toString());
