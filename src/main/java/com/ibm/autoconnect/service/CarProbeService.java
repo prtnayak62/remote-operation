@@ -1,37 +1,25 @@
 package com.ibm.autoconnect.service;
 
-import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.Bucket;
-import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.MutationResult;
-import com.ibm.autoconnect.config.CouchbaseProperties;
-import com.ibm.autoconnect.utils.MSILConstants;
-
 import java.util.Map;
 
-import org.json.JSONObject;
 import org.springframework.stereotype.Service;
+
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.Collection;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.MutationResult;
+import com.ibm.autoconnect.utils.MSILConstants;
 
 @Service
 public class CarProbeService {
-
-    private final Cluster cluster;
+	
     private final Bucket bucket;
-
-    public CarProbeService(CouchbaseProperties couchbaseProperties) {
-        // Connect using env variable values
-        this.cluster = Cluster.connect(
-                couchbaseProperties.getConnectionString(),
-                couchbaseProperties.getUsername(),
-                couchbaseProperties.getPassword()
-        );
-
-        this.bucket = cluster.bucket(couchbaseProperties.getBucket());
-        this.bucket.waitUntilReady(java.time.Duration.ofSeconds(10));
+    
+    public CarProbeService(Bucket bucket) {
+    	this.bucket = bucket;
     }
-
+    
     public String getCarProbeById(String documentId) {
         try {
             Collection collection = bucket.scope(MSILConstants.couchbaseScope).collection(MSILConstants.PROBECOLLECTIONCOUCH); // adjust if scope/collection differ

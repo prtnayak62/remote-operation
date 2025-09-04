@@ -5,18 +5,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonObject;
 import com.ibm.autoconnect.model.CarProbe;
 import com.ibm.autoconnect.model.RemoteControlGen3Result;
 import com.ibm.autoconnect.repository.VehicleInputPayload;
 import com.ibm.autoconnect.rule.model.CarProbePayload;
 import com.ibm.autoconnect.utils.MSILConstants;
 import com.ibm.autoconnect.utils.RemoteUtils;
-
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,7 +32,7 @@ public class Remote1402Message implements RemoteProcessor {
     }
 
     @Override
-    public CarProbePayload processMessage(JSONObject data) {
+    public CarProbePayload processMessage(JsonObject data) {
     	HashMap<String,Object> probeMap = new HashMap<>();
     	Properties props = new Properties();
     	CarProbePayload carProbePayload=new CarProbePayload();

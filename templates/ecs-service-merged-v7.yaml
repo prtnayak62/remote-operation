@@ -110,6 +110,21 @@ Parameters:
     Type: String
     Default: 'postgres'
     Description: Database username for connection
+  
+  CouchbaseSecretArn:
+    Type: String
+    Default: 'CouchbaseSecretArn'
+    Description: Couchbase credentials secret manager ARN
+    
+  CouchbaseBucket:
+    Type: String
+    Default: 'newgen'
+    Description: Couchbase bucket name
+    
+  KafkaIamUrlArn:
+    Type: String
+    Default: 'KafkaIamUrlArn'
+    Description: MSK Serverless broker IAM url ARN
 
 Conditions:
   IsProduction: !Equals [!Ref Environment, 'prod']
@@ -188,6 +203,8 @@ Resources:
             # Common environment variables
             - Name: ENVIRONMENT
               Value: !Ref Environment
+            - Name: SCOPE_NAME
+              Value: "dev"
             - Name: SERVICE_NAME
               Value: !Ref ServiceName
             - Name: SERVICE_TYPE
@@ -200,6 +217,10 @@ Resources:
               Value: !If [EnableXRayDaemonSidecar, 'localhost:2000', !Ref 'AWS::NoValue']
             - Name: AWS_XRAY_TRACING_NAME
               Value: !Ref ServiceName
+            - Name: COUCHBASE_BUCKET
+              Value: !Ref CouchbaseBucket
+            - Name: NOTIFICATION_TOPIC
+              Value: 'sample-topic'
             
             # Resource-based environment variables (any service type can use any resource)
             # Database environments (if NeedsDatabase=true)
@@ -298,12 +319,17 @@ Resources:
                 Value: !Ref ServiceName
               - !Ref 'AWS::NoValue'
           
-          Secrets: !If
-            - RequiresDatabase
-            - - Name: DATABASE_PASSWORD
+          Secrets: 
+            - Name: COUCHBASE_CREDENTIALS
+              ValueFrom: !Ref CouchbaseSecretArn
+            - Name: KAFKA_BOOTSTRAP_URLS
+              ValueFrom: !Ref KafkaIamUrlArn  
+            - !If
+              - RequiresDatabase
+              - Name: DATABASE_PASSWORD
                 ValueFrom: !ImportValue
                   Fn::Sub: '${Environment}-DatabaseMasterSecretArn'
-            - !Ref 'AWS::NoValue'
+              - !Ref 'AWS::NoValue'
           
           LogConfiguration:
             LogDriver: awslogs

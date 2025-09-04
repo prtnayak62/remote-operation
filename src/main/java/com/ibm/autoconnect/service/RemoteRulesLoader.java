@@ -59,7 +59,7 @@ public class RemoteRulesLoader {
 		}
 	}
 
-	public List<JsonObject> getTripRules() {
+	public List<JsonObject> getRemoteRules() {
 		return this.rules;
 	}
 }

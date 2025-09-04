@@ -117,27 +117,17 @@ Resources:
             Resource: '*'
           
           # Secrets Manager and KMS access for API services
-          - !If
-            - IsAPIService
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-                - secretsmanager:DescribeSecret
-              Resource: !ImportValue
-                Fn::Sub: '${Environment}-DatabaseMasterSecretArn'
-            - !Ref AWS::NoValue
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+            Resource: '*'
           
-          - !If
-            - IsAPIService
-            - Effect: Allow
-              Action:
-                - kms:Decrypt
-                - kms:DescribeKey
-              Resource: !Sub 
-                - 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKeyId}'
-                - SecretsKMSKeyId: !ImportValue
-                    Fn::Sub: '${Environment}-SecretsKMSKeyId'
-            - !Ref AWS::NoValue
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource: '*'
           
           # MSK access (conditional)
           - !If
