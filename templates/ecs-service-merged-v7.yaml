@@ -125,6 +125,11 @@ Parameters:
     Type: String
     Default: 'KafkaIamUrlArn'
     Description: MSK Serverless broker IAM url ARN
+  
+  KafkaTopic:
+    Type: String
+    Default: 'KafkaTopic'
+    Description: Kafka Topic
 
 Conditions:
   IsProduction: !Equals [!Ref Environment, 'prod']
@@ -219,8 +224,8 @@ Resources:
               Value: !Ref ServiceName
             - Name: COUCHBASE_BUCKET
               Value: !Ref CouchbaseBucket
-            - Name: NOTIFICATION_TOPIC
-              Value: 'sample-topic'
+            - Name: ALERT_TOPIC
+              Value: !Ref KafkaTopic
             
             # Resource-based environment variables (any service type can use any resource)
             # Database environments (if NeedsDatabase=true)
