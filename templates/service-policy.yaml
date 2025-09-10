@@ -1,0 +1,663 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Service-specific IAM Policy Template v1-DDD - Domain-Driven'
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+  
+  Region:
+    Type: String
+    Description: AWS Region for resource naming
+  
+  ServiceName:
+    Type: String
+    Description: Name of the microservice
+    
+  DomainName:
+    Type: String
+    Description: Domain name (e.g., customer, payment)
+    Default: ""
+    
+  ProductName:
+    Type: String
+    Description: Product name (optional)
+    Default: ""
+  
+  ServiceType:
+    Type: String
+    AllowedValues: [api, kafka-consumer, sqs-sns-worker, internal-service, batch-job]
+    Description: Type of service
+  
+  # Optional service-specific permissions
+  NeedsMSK:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need MSK access?
+  
+  NeedsSQS:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need SQS access?
+  
+  NeedsSNS:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need SNS access?
+  
+  NeedsS3:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need S3 access?
+  
+  NeedsDatabase:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need RDS/Aurora access?
+  
+  NeedsRedis:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need ElastiCache Redis access?
+  
+  NeedsDynamoDB:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Does this service need DynamoDB/DAX access?
+  
+  MSKProducerLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where MSK producer is deployed
+    
+  MSKConsumerLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where MSK consumer is deployed
+    
+  DatabaseLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where database is deployed
+    
+  RedisLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where Redis is deployed
+    
+  S3Level:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where S3 is deployed
+    
+  SQSLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where SQS is deployed
+    
+  SNSLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where SNS is deployed
+    
+  DynamoDBLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where DynamoDB is deployed
+
+Conditions:
+  RequiresMSK: !Equals [!Ref NeedsMSK, 'true']
+  RequiresSQS: !Equals [!Ref NeedsSQS, 'true']
+  RequiresSNS: !Equals [!Ref NeedsSNS, 'true']
+  RequiresS3: !Equals [!Ref NeedsS3, 'true']
+  RequiresDatabase: !Equals [!Ref NeedsDatabase, 'true']
+  RequiresRedis: !Equals [!Ref NeedsRedis, 'true']
+  RequiresDynamoDB: !Equals [!Ref NeedsDynamoDB, 'true']
+  IsAPIService: !Equals [!Ref ServiceType, 'api']
+  IsKafkaConsumer: !Equals [!Ref ServiceType, 'kafka-consumer']
+  IsSQSSNSWorker: !Equals [!Ref ServiceType, 'sqs-sns-worker']
+  IsInternalService: !Equals [!Ref ServiceType, 'internal-service']
+  IsBatchJob: !Equals [!Ref ServiceType, 'batch-job']
+  IsDev: !Equals [!Ref Environment, 'dev']
+  HasDomainName: !Not [!Equals [!Ref DomainName, ""]]
+  HasProductName: !Not [!Equals [!Ref ProductName, ""]]
+  IsDomainLevel: !And [!Condition HasDomainName, !Not [!Condition HasProductName]]
+  IsProductLevel: !And [!Condition HasDomainName, !Condition HasProductName]
+  MSKProducerAtFoundation: !Equals [!Ref MSKProducerLevel, "foundation"]
+  MSKProducerAtDomain: !Equals [!Ref MSKProducerLevel, "domain"]
+  MSKProducerAtProduct: !Equals [!Ref MSKProducerLevel, "product"]
+  MSKConsumerAtFoundation: !Equals [!Ref MSKConsumerLevel, "foundation"]
+  MSKConsumerAtDomain: !Equals [!Ref MSKConsumerLevel, "domain"]
+  MSKConsumerAtProduct: !Equals [!Ref MSKConsumerLevel, "product"]
+  DatabaseAtFoundation: !Equals [!Ref DatabaseLevel, "foundation"]
+  DatabaseAtDomain: !Equals [!Ref DatabaseLevel, "domain"]
+  DatabaseAtProduct: !Equals [!Ref DatabaseLevel, "product"]
+  RedisAtFoundation: !Equals [!Ref RedisLevel, "foundation"]
+  RedisAtDomain: !Equals [!Ref RedisLevel, "domain"]
+  RedisAtProduct: !Equals [!Ref RedisLevel, "product"]
+  S3AtFoundation: !Equals [!Ref S3Level, "foundation"]
+  S3AtDomain: !Equals [!Ref S3Level, "domain"]
+  S3AtProduct: !Equals [!Ref S3Level, "product"]
+  SQSAtFoundation: !Equals [!Ref SQSLevel, "foundation"]
+  SQSAtDomain: !Equals [!Ref SQSLevel, "domain"]
+  SQSAtProduct: !Equals [!Ref SQSLevel, "product"]
+  SNSAtFoundation: !Equals [!Ref SNSLevel, "foundation"]
+  SNSAtDomain: !Equals [!Ref SNSLevel, "domain"]
+  SNSAtProduct: !Equals [!Ref SNSLevel, "product"]
+  DynamoDBAtFoundation: !Equals [!Ref DynamoDBLevel, "foundation"]
+  DynamoDBAtDomain: !Equals [!Ref DynamoDBLevel, "domain"]
+  DynamoDBAtProduct: !Equals [!Ref DynamoDBLevel, "product"]
+
+Resources:
+  # Service-specific IAM Policy
+  ServicePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !If
+        - IsProductLevel
+        - !Join
+          - '-'
+          - - !Ref Environment
+            - !Ref DomainName
+            - !Ref ProductName
+            - !Ref ServiceName            
+            # - !Select [0, !Split ['-', !Ref ProductName]]
+            # - !Select [0, !Split ['-', !Ref ServiceName]]
+            - 'pol'
+            - !Join ['', !Split ['-', !Ref Region]]
+        - !If
+          - IsDomainLevel
+          - !Join
+            - '-'
+            - - !Ref Environment
+              - !Ref DomainName
+              - !Ref ServiceName              
+              # - !Select [0, !Split ['-', !Ref ServiceName]]
+              - 'pol'
+              - !Join ['', !Split ['-', !Ref Region]]
+          - !Join
+            - '-'
+            - - !Ref Environment            
+              - !Ref ServiceName              
+              # - !Select [0, !Split ['-', !Ref ServiceName]]
+              - 'pol'
+              - !Join ['', !Split ['-', !Ref Region]]
+      Description: !Sub 'Service-specific permissions for ${ServiceName} (v1-DDD)'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # For exec enable on task required these for Dev env
+          - !If
+            - IsDev
+            - Effect: Allow
+              Action:                 
+                - ssmmessages:CreateControlChannel
+                - ssmmessages:CreateDataChannel
+                - ssmmessages:OpenControlChannel
+                - ssmmessages:OpenDataChannel
+              Resource: "*"
+            - !Ref AWS::NoValue
+          # Basic CloudWatch Logs access (always needed)
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !If
+              - IsProductLevel
+              - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${Environment}/${DomainName}/${ProductName}/${ServiceName}:*'
+              - !If
+                - IsDomainLevel
+                - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${Environment}/${DomainName}/${ServiceName}:*'
+                - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${Environment}/${ServiceName}:*'
+          
+          # X-Ray permissions (always needed for tracing)
+          - Effect: Allow
+            Action:
+              - xray:PutTraceSegments
+              - xray:PutTelemetryRecords
+              - xray:GetSamplingRules
+              - xray:GetSamplingTargets
+            Resource: '*'
+          
+          # CloudWatch Metrics permissions (always needed for monitoring)
+          - Effect: Allow
+            Action:
+              - cloudwatch:PutMetricData
+              - cloudwatch:GetMetricStatistics
+              - cloudwatch:ListMetrics
+            Resource: '*'
+          
+          # SSM Parameter access for MSK cluster ARN (supports all levels)
+          - !If
+            - RequiresMSK
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource: !If
+                - MSKProducerAtProduct
+                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/${DomainName}/${ProductName}/messaging/msk-producer-cluster-arn'
+                - !If
+                  - MSKProducerAtDomain
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/${DomainName}/messaging/msk-producer-cluster-arn'
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/foundation/messaging/msk-producer-cluster-arn'
+            - !Ref AWS::NoValue
+          
+          # Secrets Manager access for database
+          - !If
+            - RequiresDatabase
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+                - secretsmanager:DescribeSecret
+              Resource: !If
+                - DatabaseAtProduct
+                - !ImportValue
+                  Fn::Sub: '${Environment}-${DomainName}-${ProductName}-DatabaseSecretArn'
+                - !If
+                  - DatabaseAtDomain
+                  - !ImportValue
+                    Fn::Sub: '${Environment}-${DomainName}-DatabaseSecretArn'
+                  - !ImportValue
+                    Fn::Sub: '${Environment}-DatabaseSecretArn'
+            - !Ref AWS::NoValue
+          
+          # Consolidated KMS access for all encryption needs
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:GenerateDataKey
+            Resource:
+              - !If
+                - RequiresDatabase
+                - !Sub 
+                  - 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${DatabaseKMSKeyId}'
+                  - DatabaseKMSKeyId: !ImportValue
+                      Fn::Sub: '${Environment}-DatabaseKMSKeyId'
+                - !Ref AWS::NoValue
+              - !If
+                - RequiresDatabase
+                - !Sub 
+                  - 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKeyId}'
+                  - SecretsKMSKeyId: !ImportValue
+                      Fn::Sub: '${Environment}-SecretsKMSKeyId'
+                - !Ref AWS::NoValue
+              - !If
+                - RequiresMSK
+                - !Sub 
+                  - 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${MessagingKMSKeyId}'
+                  - MessagingKMSKeyId: !ImportValue
+                      Fn::Sub: '${Environment}-MessagingKMSKeyId'
+                - !Ref AWS::NoValue
+              - !If
+                - RequiresRedis
+                - !Sub 
+                  - 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${CacheKMSKeyId}'
+                  - CacheKMSKeyId: !ImportValue
+                      Fn::Sub: '${Environment}-CacheKMSKeyId'
+                - !Ref AWS::NoValue
+              - !If
+                - RequiresS3
+                - !Sub 
+                  - 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${StorageKMSKeyId}'
+                  - StorageKMSKeyId: !ImportValue
+                      Fn::Sub: '${Environment}-StorageKMSKeyId'
+                - !Ref AWS::NoValue
+          
+          # MSK access (conditional)
+          - !If
+            - RequiresMSK
+            - Effect: Allow
+              Action:
+                - kafka:DescribeCluster
+                - kafka:GetBootstrapBrokers
+                - kafka:ListClusters
+                - kafka:ListTopics
+                - kafka:DescribeTopicDynamicConfiguration
+                - kafka:DescribeClusterV2
+                - kafka:DescribeClusterOperation
+                - cloudformation:ListExports
+              Resource: '*'
+            - !Ref AWS::NoValue
+          
+          - !If
+            - RequiresMSK
+            - Effect: Allow
+              Action:
+                - kafka-cluster:Connect
+                - kafka-cluster:AlterCluster
+                - kafka-cluster:DescribeCluster
+              Resource: !If
+                - MSKProducerAtProduct
+                - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/${ProductName}/messaging/msk-producer-cluster-arn}}'
+                - !If
+                  - MSKProducerAtDomain
+                  - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/messaging/msk-producer-cluster-arn}}'
+                  - !Sub '{{resolve:ssm:/${Environment}/foundation/messaging/msk-producer-cluster-arn}}'
+            - !Ref AWS::NoValue
+          
+          # - !If
+          #   - RequiresMSK
+          #   - Effect: Allow
+          #     Action:
+          #       - kafka-cluster:*Topic*
+          #       - kafka-cluster:WriteData
+          #       - kafka-cluster:ReadData
+          #     Resource: !If
+          #       - MSKAtProduct
+          #       - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/${ProductName}/messaging/msk-cluster-arn}}/*'
+          #       - !If
+          #         - MSKAtDomain
+          #         - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/messaging/msk-cluster-arn}}/*'
+          #         - !Sub '{{resolve:ssm:/${Environment}/foundation/messaging/msk-cluster-arn}}/*'
+          #   - !Ref AWS::NoValue
+          
+          # - !If
+          #   - RequiresMSK
+          #   - Effect: Allow
+          #     Action:
+          #       - kafka-cluster:AlterGroup
+          #       - kafka-cluster:DescribeGroup
+          #     Resource: !If
+          #       - MSKAtProduct
+          #       - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/${ProductName}/messaging/msk-cluster-arn}}/*'
+          #       - !If
+          #         - MSKAtDomain
+          #         - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/messaging/msk-cluster-arn}}/*'
+          #         - !Sub '{{resolve:ssm:/${Environment}/foundation/messaging/msk-cluster-arn}}/*'
+          #   - !Ref AWS::NoValue
+          
+          # MSK Topic access (using single SSM parameter with cluster name/UUID)
+          - !If
+            - RequiresMSK
+            - Effect: Allow
+              Action:
+                - kafka-cluster:*Topic*
+                - kafka-cluster:WriteData
+                - kafka-cluster:ReadData
+              Resource: !Sub
+                - 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:topic/${ClusterName}/*'
+                - ClusterName: !If
+                  - MSKProducerAtProduct
+                  - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/${ProductName}/messaging/msk-producer-cluster-name}}'
+                  - !If
+                    - MSKProducerAtDomain
+                    - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/messaging/msk-producer-cluster-name}}'
+                    - !Sub '{{resolve:ssm:/${Environment}/foundation/messaging/msk-producer-cluster-name}}'
+            - !Ref AWS::NoValue
+          
+          # MSK Group access (using single SSM parameter with cluster name/UUID)
+          - !If
+            - RequiresMSK
+            - Effect: Allow
+              Action:
+                - kafka-cluster:AlterGroup
+                - kafka-cluster:DescribeGroup
+              Resource: !Sub
+                - 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:group/${ClusterName}/*'
+                - ClusterName: !If
+                  - MSKProducerAtProduct
+                  - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/${ProductName}/messaging/msk-producer-cluster-name}}'
+                  - !If
+                    - MSKProducerAtDomain
+                    - !Sub '{{resolve:ssm:/${Environment}/${DomainName}/messaging/msk-producer-cluster-name}}'
+                    - !Sub '{{resolve:ssm:/${Environment}/foundation/messaging/msk-producer-cluster-name}}'
+            - !Ref AWS::NoValue
+          
+          # SQS access (conditional)
+          - !If
+            - RequiresSQS
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - sqs:GetQueueAttributes
+                - sqs:ChangeMessageVisibility
+                - sqs:GetQueueUrl
+              Resource: !If
+                - SQSAtProduct
+                - - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-${DomainName}-${ProductName}-${ServiceName}-*'
+                  - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-${DomainName}-${ProductName}-*'
+                - !If
+                  - SQSAtDomain
+                  - - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-${DomainName}-${ServiceName}-*'
+                    - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-${DomainName}-*'
+                  - - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-${ServiceName}-*'
+                    - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-*'
+            - !Ref AWS::NoValue
+          
+          # SNS access (conditional)
+          - !If
+            - RequiresSNS
+            - Effect: Allow
+              Action:
+                - sns:Publish
+                - sns:Subscribe
+                - sns:Unsubscribe
+                - sns:GetTopicAttributes
+              Resource: !If
+                - SNSAtProduct
+                - - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Environment}-${DomainName}-${ProductName}-${ServiceName}-*'
+                  - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Environment}-${DomainName}-${ProductName}-*'
+                - !If
+                  - SNSAtDomain
+                  - - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Environment}-${DomainName}-${ServiceName}-*'
+                    - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Environment}-${DomainName}-*'
+                  - - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Environment}-${ServiceName}-*'
+                    - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Environment}-*'
+            - !Ref AWS::NoValue
+          
+          # S3 access (conditional)
+          - !If
+            - RequiresS3
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+              Resource: !If
+                - S3AtProduct
+                - !Sub 'arn:aws:s3:::${Environment}-${DomainName}-${ProductName}-${ServiceName}-*/*'
+                - !If
+                  - S3AtDomain
+                  - !Sub 'arn:aws:s3:::${Environment}-${DomainName}-${ServiceName}-*/*'
+                  - !Sub 'arn:aws:s3:::${Environment}-${ServiceName}-*/*'
+            - !Ref AWS::NoValue
+          
+          # Database access (conditional)
+          - !If
+            - RequiresDatabase
+            - Effect: Allow
+              Action:
+                - rds:DescribeDBClusters
+                - rds:DescribeDBInstances
+                - rds:DescribeDBClusterSnapshots
+                - rds:DescribeDBSnapshots
+                - rds:ListTagsForResource
+              Resource: '*'
+            - !Ref AWS::NoValue
+          
+          - !If
+            - RequiresDatabase
+            - Effect: Allow
+              Action:
+                - rds-db:connect
+              Resource: !If
+                - DatabaseAtProduct
+                - !Sub 'arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${Environment}-${DomainName}-${ProductName}-*/*'
+                - !If
+                  - DatabaseAtDomain
+                  - !Sub 'arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${Environment}-${DomainName}-*/*'
+                  - !Sub 'arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${Environment}-*/*'
+            - !Ref AWS::NoValue
+          
+          # Redis/ElastiCache access (conditional)
+          - !If
+            - RequiresRedis
+            - Effect: Allow
+              Action:
+                - elasticache:DescribeCacheClusters
+                - elasticache:DescribeReplicationGroups
+                - elasticache:DescribeCacheSubnetGroups
+                - elasticache:DescribeCacheParameters
+                - elasticache:DescribeCacheParameterGroups
+                - elasticache:ListTagsForResource
+              Resource: '*'
+            - !Ref AWS::NoValue
+          
+          # DynamoDB/DAX access (conditional)
+          - !If
+            - RequiresDynamoDB
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:BatchGetItem
+                - dynamodb:BatchWriteItem
+                - dynamodb:DescribeTable
+                - dynamodb:ListTables
+                - dynamodb:DescribeStream
+                - dynamodb:GetRecords
+                - dynamodb:GetShardIterator
+                - dynamodb:ListStreams
+              Resource: !If
+                - DynamoDBAtProduct
+                - - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-${DomainName}-${ProductName}-*'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-${DomainName}-${ProductName}-*/index/*'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-${DomainName}-${ProductName}-*/stream/*'
+                - !If
+                  - DynamoDBAtDomain
+                  - - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-${DomainName}-*'
+                    - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-${DomainName}-*/index/*'
+                    - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-${DomainName}-*/stream/*'
+                  - - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-*'
+                    - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-*/index/*'
+                    - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-*/stream/*'
+            - !Ref AWS::NoValue
+          
+          - !If
+            - RequiresDynamoDB
+            - Effect: Allow
+              Action:
+                - dax:GetItem
+                - dax:PutItem
+                - dax:UpdateItem
+                - dax:DeleteItem
+                - dax:Query
+                - dax:Scan
+                - dax:BatchGetItem
+                - dax:BatchWriteItem
+                - dax:DescribeTable
+                - dax:ListTables
+              Resource: !If
+                - DynamoDBAtProduct
+                - !Sub 'arn:aws:dax:${AWS::Region}:${AWS::AccountId}:cache/${Environment}-${DomainName}-${ProductName}-*'
+                - !If
+                  - DynamoDBAtDomain
+                  - !Sub 'arn:aws:dax:${AWS::Region}:${AWS::AccountId}:cache/${Environment}-${DomainName}-*'
+                  - !Sub 'arn:aws:dax:${AWS::Region}:${AWS::AccountId}:cache/${Environment}-*'
+            - !Ref AWS::NoValue
+
+  # Service-specific Task Role
+  ServiceTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !If
+        - IsProductLevel
+        - !Join
+          - '-'
+          - - !Ref Environment
+            - !Ref DomainName
+            - !Ref ProductName
+            - !Ref ServiceName            
+            # - !Select [0, !Split ['-', !Ref ProductName]]
+            # - !Select [0, !Split ['-', !Ref ServiceName]]
+            - 'role'
+            - !Join ['', !Split ['-', !Ref Region]]
+        - !If
+          - IsDomainLevel
+          - !Join
+            - '-'
+            - - !Ref Environment
+              - !Ref DomainName
+              - !Ref ServiceName              
+              # - !Select [0, !Split ['-', !Ref ServiceName]]
+              - 'role'
+              - !Join ['', !Split ['-', !Ref Region]]
+          - !Join
+            - '-'
+            - - !Ref Environment            
+              - !Ref ServiceName            
+              # - !Select [0, !Split ['-', !Ref ServiceName]]
+              - 'role'
+              - !Join ['', !Split ['-', !Ref Region]]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref ServicePolicy
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Domain
+          Value: !If [HasDomainName, !Ref DomainName, "foundation"]
+        - Key: Product
+          Value: !If [HasProductName, !Ref ProductName, ""]
+        - Key: Service
+          Value: !Ref ServiceName
+        - Key: ServiceType
+          Value: !Ref ServiceType
+        - Key: Version
+          Value: v1-DDD
+
+Outputs:
+  ServiceTaskRoleArn:
+    Description: Service-specific Task Role ARN (v1-DDD)
+    Value: !GetAtt ServiceTaskRole.Arn
+    Export:
+      Name: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-TaskRoleArn'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-TaskRoleArn'
+          - !Sub '${Environment}-${ServiceName}-TaskRoleArn'
+
+  ServicePolicyArn:
+    Description: Service-specific Policy ARN (v1-DDD)
+    Value: !Ref ServicePolicy
+    Export:
+      Name: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-PolicyArn'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-PolicyArn'
+          - !Sub '${Environment}-${ServiceName}-PolicyArn'

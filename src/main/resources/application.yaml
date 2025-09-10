@@ -1,25 +1,44 @@
 spring:
   application:
     name: remote-mngr-service
-
+server:
+  port: 9092 
 kafka-properties:
   application-id: remote-mngr-service
-  bootstrap-servers: ${KAFKA_BOOTSTRAP_URLS}
-  alert-topic: ${ALERT_TOPIC}
+  probe-topic: ${PRODUCER_TOPIC_NAME}
+  alert-topic: ${CONSUMER_TOPIC_NAME}
   security-protocol: SASL_SSL
   sasl-mechanism: AWS_MSK_IAM
   sasl-jaas-config: software.amazon.msk.auth.iam.IAMLoginModule required;
   sasl-client-callback-handler-class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
-  
-  
+
 couchbase-properties:
-  credentials: ${COUCHBASE_CREDENTIALS}
+  connection-string: ${COUCHBASE_ENDPOINT}
+  username: ${COUCHBASE_USERNAME}
+  password: ${COUCHBASE_PASSWORD}
   bucket: ${COUCHBASE_BUCKET}
+  
+redis-properties:
+  host: ${REDIS_ENDPOINT:localhost}
+  port: ${REDIS_PORT:6379}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
 
 logging:
+  pattern:
+    console: "${LOGGING_PATTERN_CONSOLE:%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}}"
+    level: "%5p %replace([track_id=%X{track_id}]){'\\[track_id=\\]', ''}" 
   level:
-    root: INFO
-    org.springframework.web: DEBUG
-
-server:
-  port: 9090
+    com.ibm.autoconnect.controller.HealthController: WARN
+    com.couchbase: WARN
+    com.couchbase.core: WARN
+    reactor.netty: WARN
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN     

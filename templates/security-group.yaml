@@ -1,0 +1,225 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Security Group for Internal Service (v12)'
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+  
+  ServiceName:
+    Type: String
+    Description: Name of the microservice
+    
+  DomainName:
+    Type: String
+    Description: Domain name (e.g., customer, payment)
+    Default: ""
+    
+  ProductName:
+    Type: String
+    Description: Product name (optional)
+    Default: ""
+  
+  ServicePort:
+    Type: Number
+    Default: 8080
+    Description: Port for Service Connect endpoints
+    
+  DatabaseLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where database is deployed
+    
+  RedisLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where Redis is deployed
+    
+  DAXLevel:
+    Type: String
+    Default: "foundation"
+    AllowedValues: ["foundation", "domain", "product"]
+    Description: Level where DAX is deployed
+
+Conditions:
+  HasDomainName: !Not [!Equals [!Ref DomainName, ""]]
+  HasProductName: !Not [!Equals [!Ref ProductName, ""]]
+  IsDomainLevel: !And [!Condition HasDomainName, !Not [!Condition HasProductName]]
+  IsProductLevel: !And [!Condition HasDomainName, !Condition HasProductName]
+  DatabaseAtFoundation: !Equals [!Ref DatabaseLevel, "foundation"]
+  DatabaseAtDomain: !Equals [!Ref DatabaseLevel, "domain"]
+  DatabaseAtProduct: !Equals [!Ref DatabaseLevel, "product"]
+  RedisAtFoundation: !Equals [!Ref RedisLevel, "foundation"]
+  RedisAtDomain: !Equals [!Ref RedisLevel, "domain"]
+  RedisAtProduct: !Equals [!Ref RedisLevel, "product"]
+  DAXAtFoundation: !Equals [!Ref DAXLevel, "foundation"]
+  DAXAtDomain: !Equals [!Ref DAXLevel, "domain"]
+  DAXAtProduct: !Equals [!Ref DAXLevel, "product"]
+
+Resources:
+  # Internal Service Security Group
+  InternalServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub 'Security group for ${ServiceName} internal service'
+      SecurityGroupIngress:
+        # Service Connect port (inter-service communication only)
+        - IpProtocol: tcp
+          FromPort: !Ref ServicePort
+          ToPort: !Ref ServicePort
+          CidrIp: 
+            Fn::ImportValue: !Sub '${Environment}-VpcCidr'
+          Description: 'Service Connect port from VPC'
+        # Service Connect inter-service range
+        # - IpProtocol: tcp
+        #   FromPort: 8080
+        #   ToPort: 8090
+        #   CidrIp: 
+        #     Fn::ImportValue: !Sub '${Environment}-VpcCidr'
+        #   Description: 'Service Connect inter-service communication to a port range'
+        - IpProtocol: -1
+          CidrIp: 
+            Fn::ImportValue: !Sub '${Environment}-VpcCidr'
+          Description: 'Service Connect inter-service communication to all within VPC'
+      SecurityGroupEgress:
+        # Database access (PostgreSQL)
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          DestinationSecurityGroupId: !If
+            - DatabaseAtProduct
+            - !ImportValue
+              Fn::Sub: '${Environment}-${DomainName}-${ProductName}-DatabaseSecurityGroupId'
+            - !If
+              - DatabaseAtDomain
+              - !ImportValue
+                Fn::Sub: '${Environment}-${DomainName}-DatabaseSecurityGroupId'
+              - !ImportValue
+                Fn::Sub: '${Environment}-DatabaseSecurityGroupId'
+          Description: 'PostgreSQL to Aurora'
+        # Database access (MySQL)
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          DestinationSecurityGroupId: !If
+            - DatabaseAtProduct
+            - !ImportValue
+              Fn::Sub: '${Environment}-${DomainName}-${ProductName}-DatabaseSecurityGroupId'
+            - !If
+              - DatabaseAtDomain
+              - !ImportValue
+                Fn::Sub: '${Environment}-${DomainName}-DatabaseSecurityGroupId'
+              - !ImportValue
+                Fn::Sub: '${Environment}-DatabaseSecurityGroupId'
+          Description: 'MySQL to Aurora'
+        # ElastiCache access
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          DestinationSecurityGroupId: !If
+            - RedisAtProduct
+            - !ImportValue
+              Fn::Sub: '${Environment}-${DomainName}-${ProductName}-ElastiCacheSecurityGroupId'
+            - !If
+              - RedisAtDomain
+              - !ImportValue
+                Fn::Sub: '${Environment}-${DomainName}-ElastiCacheSecurityGroupId'
+              - !ImportValue
+                Fn::Sub: '${Environment}-ElastiCacheSecurityGroupId'
+          Description: 'Redis to ElastiCache'
+        # DAX access
+        - IpProtocol: tcp
+          FromPort: 8111
+          ToPort: 8111
+          DestinationSecurityGroupId: !If
+            - DAXAtProduct
+            - !ImportValue
+              Fn::Sub: '${Environment}-${DomainName}-${ProductName}-DAXSecurityGroupId'
+            - !If
+              - DAXAtDomain
+              - !ImportValue
+                Fn::Sub: '${Environment}-${DomainName}-DAXSecurityGroupId'
+              - !ImportValue
+                Fn::Sub: '${Environment}-DAXSecurityGroupId'
+          Description: 'DAX cluster access'
+        - IpProtocol: tcp
+          FromPort: 9111
+          ToPort: 9111
+          DestinationSecurityGroupId: !If
+            - DAXAtProduct
+            - !ImportValue
+              Fn::Sub: '${Environment}-${DomainName}-${ProductName}-DAXSecurityGroupId'
+            - !If
+              - DAXAtDomain
+              - !ImportValue
+                Fn::Sub: '${Environment}-${DomainName}-DAXSecurityGroupId'
+              - !ImportValue
+                Fn::Sub: '${Environment}-DAXSecurityGroupId'
+          Description: 'DAX TLS access'
+
+        - IpProtocol: tcp
+          FromPort: 8091
+          ToPort: 8097
+          CidrIp: 0.0.0.0/0
+          Description: Couchbase cluster management and services
+        - IpProtocol: tcp
+          FromPort: 9123
+          ToPort: 9123
+          CidrIp: 0.0.0.0/0
+          Description: Couchbase backup service
+        - IpProtocol: tcp
+          FromPort: 11207
+          ToPort: 11215
+          CidrIp: 0.0.0.0/0
+          Description: Couchbase data service ports
+        - IpProtocol: tcp
+          FromPort: 18091
+          ToPort: 18097
+          CidrIp: 0.0.0.0/0
+          Description: Couchbase SSL/TLS services
+
+
+        # AWS Services (HTTPS)
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: 'HTTPS to AWS services'
+        # Service Connect outbound
+        # - IpProtocol: tcp
+        #   FromPort: 8080
+        #   ToPort: 8090
+        #   CidrIp: 
+        #     Fn::ImportValue: !Sub '${Environment}-VpcCidr'
+        #   Description: 'Service Connect outbound only to a port range'
+        - IpProtocol: -1
+          CidrIp: 
+            Fn::ImportValue: !Sub '${Environment}-VpcCidr'
+          Description: 'Service Connect outbound to all within VPC'
+      VpcId:
+        Fn::ImportValue: !Sub '${Environment}-VpcId'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-${ServiceName}-internal-service-sg'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref ServiceName
+        - Key: ServiceType
+          Value: internal-service
+
+Outputs:
+  InternalServiceSecurityGroupId:
+    Description: Internal Service Security Group ID
+    Value: !Ref InternalServiceSecurityGroup
+    Export:
+      Name: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-SecurityGroupId'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-SecurityGroupId'
+          - !Sub '${Environment}-${ServiceName}-SecurityGroupId'      

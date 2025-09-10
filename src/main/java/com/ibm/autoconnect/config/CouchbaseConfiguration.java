@@ -9,9 +9,6 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @Configuration
 public class CouchbaseConfiguration extends AbstractCouchbaseConfiguration {
 
@@ -23,25 +20,21 @@ public class CouchbaseConfiguration extends AbstractCouchbaseConfiguration {
 
     @Override
     public String getBucketName() {
-    	log.info("Bucket to connect {}", couchbaseProperties.getBucket());
         return couchbaseProperties.getBucket();
     }
 
     @Override
     public String getConnectionString() {
-    	log.info("ConnectionString to connect {}", couchbaseProperties.getConnectionString());
         return couchbaseProperties.getConnectionString();
     }
 
     @Override
     public String getPassword() {
-    	log.info("Password to connect {}", couchbaseProperties.getPassword());
         return couchbaseProperties.getPassword();
     }
 
     @Override
     public String getUserName() {
-    	log.info("Username to connect {}", couchbaseProperties.getUsername());
         return couchbaseProperties.getUsername();
     }
     

@@ -1,39 +1,83 @@
 ﻿{
-    "ServiceType":  "internal-service",
+    "Environment":  "prod",
     "Features":  {
                      "EnableExecuteCommand":  false,
                      "LogLevel":  "WARN",
                      "EnableXRayTracing":  true,
                      "EnableDebugEndpoints":  false
                  },
-    "ServiceName":  "remote-mngr-service",
     "DatabaseUser":  "admin",
-    "ServicePort":  9090,
-    "Environment":  "prod",
+    "TaskCpu":  1024,
+    "CreateServiceDashboard":  "true",
+    "AWSResources":  {
+                         "JWTSecret":  "/dev/jwt/secret",
+                         "CouchbaseEndpoint":  "/dev/couchbase/autoconnect/newgen/endpoint",
+                         "CouchbaseCredentials":  "dev/couchbase/autoconnect/newgen/credentials"
+                     },
+    "ResourceLevels":  {
+                           "SQSLevel":  "foundation",
+                           "ECSLogGroupLevel":  "domain",
+                           "DatabaseLevel":  "foundation",
+                           "S3Level":  "foundation",
+                           "MSKConsumerLevel":  "foundation",
+                           "SNSLevel":  "foundation",
+                           "MSKProducerLevel":  "foundation",
+                           "DynamoDBLevel":  "foundation",
+                           "ServiceConnectLevel":  "domain",
+                           "ECSClusterLevel":  "domain",
+                           "RedisLevel":  "foundation"
+                       },
     "TaskMemory":  2048,
-    "Security":  {
-                     "RunAsNonRoot":  true,
-                     "ReadonlyRootFilesystem":  true
-                 },
-    "HealthCheckPath":  "/health",
+    "MSKConfig":  {
+                      "ConsumerTopicName1":  "events-mngr-service-input",
+                      "ProducerTopicName1":  "events-mngr-service-events"
+                  },
+    "ResourceAccess":  {
+                           "NeedsEFS":  false,
+                           "NeedsSQS":  false,
+                           "NeedsCouchbase":  true,
+                           "NeedsS3":  false,
+                           "NeedsDatabase":  false,
+                           "NeedsSNS":  false,
+                           "NeedsMSK":  true,
+                           "NeedsDynamoDB":  false,
+                           "NeedsRedis":  true
+                       },
     "ServiceTypeFeatures":  {
                                 "loadBalancer":  false,
                                 "autoScaling":  true,
                                 "serviceConnect":  true,
                                 "xrayTracing":  true
                             },
-    "TaskCpu":  1024,
-    "ResourceAccess":  {
-                           "NeedsDynamoDB":  false,
-                           "NeedsMSK":  false,
-                           "NeedsDatabase":  false,
-                           "NeedsSNS":  false,
-                           "NeedsRedis":  false,
-                           "NeedsSQS":  false
-                       },
+    "ServiceName":  "events-mngr-service",
+    "ServiceType":  "internal-service",
+    "DesiredCount":  2,
+    "FoundationServiceConnectNamespaceSSMPath":  "/dev/common/service-connect/namespace-arn",
+    "EnvironmentVariables":  {
+                                 "NODE_ENV":  "development",
+                                 "COUCHBASE_BUCKET":  "newgen",
+                                 "COUCHBASE_COLLECTION":  "events-mngr-service",
+                                 "LOG_LEVEL":  "INFO",
+                                 "COUCHBASE_SCOPE":  "dev"
+                             },
+    "CouchbaseConfig":  {
+                            "Bucket":  "newgen",
+                            "Scope":  "dev",
+                            "Level":  "foundation",
+                            "Collection":  "events-mngr-service"
+                        },
     "HealthCheckProtocol":  "HTTP",
+    "Security":  {
+                     "RunAsNonRoot":  true,
+                     "ReadonlyRootFilesystem":  true
+                 },
     "MinCapacity":  2,
     "MaxCapacity":  20,
-    "DesiredCount":  2,
+    "ProductName":  "events-sync-mgmt",
+    "ServicePort":  9092,
+    "HealthCheckPath":  "/health",
+    "CreateMonitoring":  "false",
+    "FullServiceName":  "events-events-sync-mgmt-events-mngr-service",
+    "DomainName":  "events",
     "APIGroupName":  ""
 }

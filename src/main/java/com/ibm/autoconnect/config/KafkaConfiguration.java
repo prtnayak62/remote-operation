@@ -11,18 +11,22 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-@Configuration
-public class KafkaProducerConfig {
-    
-	private final KafkaProperties kafkaProperties;
+import com.ibm.autoconnect.service.MskBootstrapService;
 
-	public KafkaProducerConfig(KafkaProperties kafkaProperties) {
+@Configuration
+public class KafkaConfiguration {
+
+	private final KafkaProperties kafkaProperties;
+	private final MskBootstrapService mskBootstrapService;
+
+	public KafkaConfiguration(KafkaProperties kafkaProperties, MskBootstrapService mskBootstrapService) {
 		this.kafkaProperties = kafkaProperties;
+		this.mskBootstrapService = mskBootstrapService;
 	}
 
 	public Map<String, Object> kakfaProperties() {
 		Map<String, Object> configProps = new HashMap<>();
-		configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
+		configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, mskBootstrapService.getBootstrapServers());
 		configProps.put(ProducerConfig.CLIENT_ID_CONFIG, kafkaProperties.getApplicationId());
 		configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 		configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
@@ -38,4 +42,5 @@ public class KafkaProducerConfig {
 	public KafkaProducer<String, String> kafkaProducer() {
 		return new KafkaProducer<>(kakfaProperties());
 	}
+
 }

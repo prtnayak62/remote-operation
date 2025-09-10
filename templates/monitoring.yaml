@@ -1,0 +1,439 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Service-Type Specific Monitoring and Alarms (v1-DDD)'
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+  
+  ServiceName:
+    Type: String
+    Description: Name of the microservice
+    
+  DomainName:
+    Type: String
+    Description: Domain name (e.g., customer, payment)
+    Default: ""
+    
+  ProductName:
+    Type: String
+    Description: Product name (optional)
+    Default: ""
+  
+  ServiceType:
+    Type: String
+    AllowedValues: [api, kafka-consumer, sqs-sns-worker, internal-service, batch-job]
+    Description: Type of service
+  
+  CreateServiceDashboard:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'Create individual service dashboard (default: false, use domain dashboard instead)'
+  
+  CreateMonitoring:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: 'Create CloudWatch alarms and monitoring (default: true)'
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, 'prod']
+  IsAPIService: !Equals [!Ref ServiceType, 'api']
+  IsKafkaConsumer: !Equals [!Ref ServiceType, 'kafka-consumer']
+  IsSQSSNSWorker: !Equals [!Ref ServiceType, 'sqs-sns-worker']
+  IsInternalService: !Equals [!Ref ServiceType, 'internal-service']
+  IsBatchJob: !Equals [!Ref ServiceType, 'batch-job']
+  IsNotBatchJob: !Not [!Equals [!Ref ServiceType, 'batch-job']]
+  NeedsHighFrequencyMonitoring: !Equals [!Ref ServiceType, 'api']
+  HasDomainName: !Not [!Equals [!Ref DomainName, ""]]
+  HasProductName: !Not [!Equals [!Ref ProductName, ""]]
+  IsDomainLevel: !And [!Condition HasDomainName, !Not [!Condition HasProductName]]
+  IsProductLevel: !And [!Condition HasDomainName, !Condition HasProductName]
+  ShouldCreateServiceDashboard: !Equals [!Ref CreateServiceDashboard, 'true']
+  ShouldCreateMonitoring: !Equals [!Ref CreateMonitoring, 'true']
+
+Resources:
+  # CPU Utilization Alarm (all service types except batch)
+  CPUUtilizationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotBatchJob
+    Properties:
+      AlarmName: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-high-cpu'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-high-cpu'
+          - !Sub '${Environment}-${ServiceName}-high-cpu'
+      AlarmDescription: !Sub 'High CPU utilization for ${ServiceName} ${ServiceType} service'
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: !If [NeedsHighFrequencyMonitoring, 60, 300]
+      EvaluationPeriods: !If [NeedsHighFrequencyMonitoring, 2, 3]
+      Threshold: !If [IsAPIService, 80, 85]
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}-${ServiceName}'
+              - !Sub '${Environment}-${ServiceName}'
+        - Name: ClusterName
+          Value: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}'
+              - !Sub '${Environment}-microservices'
+      TreatMissingData: notBreaching
+
+  # Memory Utilization Alarm
+  MemoryUtilizationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotBatchJob
+    Properties:
+      AlarmName: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-high-memory'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-high-memory'
+          - !Sub '${Environment}-${ServiceName}-high-memory'
+      AlarmDescription: !Sub 'High memory utilization for ${ServiceName} ${ServiceType} service'
+      MetricName: MemoryUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: !If [NeedsHighFrequencyMonitoring, 60, 300]
+      EvaluationPeriods: !If [NeedsHighFrequencyMonitoring, 2, 3]
+      Threshold: !If [IsAPIService, 85, 90]
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}-${ServiceName}'
+              - !Sub '${Environment}-${ServiceName}'
+        - Name: ClusterName
+          Value: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}'
+              - !Sub '${Environment}-microservices'
+      TreatMissingData: notBreaching
+
+  # Service Running Tasks Alarm (critical for all services)
+  RunningTasksAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotBatchJob
+    Properties:
+      AlarmName: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-no-running-tasks'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-no-running-tasks'
+          - !Sub '${Environment}-${ServiceName}-no-running-tasks'
+      AlarmDescription: !Sub 'No running tasks for ${ServiceName} ${ServiceType} service'
+      MetricName: RunningTaskCount
+      Namespace: ECS/ContainerInsights
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}-${ServiceName}'
+              - !Sub '${Environment}-${ServiceName}'
+        - Name: ClusterName
+          Value: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}'
+              - !Sub '${Environment}-microservices'
+      TreatMissingData: breaching
+
+  # Kafka Consumer Specific Alarm - Task Restart Frequency
+  KafkaConsumerRestartAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsKafkaConsumer
+    Properties:
+      AlarmName: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-frequent-restarts'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-frequent-restarts'
+          - !Sub '${Environment}-${ServiceName}-frequent-restarts'
+      AlarmDescription: !Sub 'Frequent task restarts for Kafka consumer ${ServiceName}'
+      MetricName: TaskCount
+      Namespace: ECS/ContainerInsights
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 3  # More than 3 task starts in 10 minutes
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}-${ServiceName}'
+              - !Sub '${Environment}-${ServiceName}'
+        - Name: ClusterName
+          Value: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}'
+              - !Sub '${Environment}-microservices'
+      TreatMissingData: notBreaching
+
+  # MSK Consumer Error Rate Alarm
+  MSKConsumerErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsKafkaConsumer
+    Properties:
+      AlarmName: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-high-error-rate'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-high-error-rate'
+          - !Sub '${Environment}-${ServiceName}-high-error-rate'
+      AlarmDescription: !Sub 'High error rate for MSK consumer ${ServiceName}'
+      MetricName: msk_error_rate
+      Namespace: MSKConsumer
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !If [IsProduction, 5, 10]  # 5% prod, 10% dev
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: application
+          Value: !Ref ServiceName
+        - Name: environment
+          Value: !Ref Environment
+      TreatMissingData: notBreaching
+
+  # MSK Consumer No Processing Alarm
+  MSKConsumerNoProcessingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsKafkaConsumer
+    Properties:
+      AlarmName: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-no-processing'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-no-processing'
+          - !Sub '${Environment}-${ServiceName}-no-processing'
+      AlarmDescription: !Sub 'No message processing for MSK consumer ${ServiceName}'
+      MetricName: msk_messages_processed.count
+      Namespace: MSKConsumer
+      Statistic: Sum
+      Period: 600  # 10 minutes
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: application
+          Value: !Ref ServiceName
+        - Name: environment
+          Value: !Ref Environment
+      TreatMissingData: breaching
+
+  # MSK Consumer Processing Time Alarm
+  MSKConsumerProcessingTimeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsKafkaConsumer
+    Properties:
+      AlarmName: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-slow-processing'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-slow-processing'
+          - !Sub '${Environment}-${ServiceName}-slow-processing'
+      AlarmDescription: !Sub 'Slow message processing for MSK consumer ${ServiceName}'
+      MetricName: msk_message_processing_time.avg
+      Namespace: MSKConsumer
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !If [IsProduction, 5000, 10000]  # 5s prod, 10s dev (in milliseconds)
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: application
+          Value: !Ref ServiceName
+        - Name: environment
+          Value: !Ref Environment
+      TreatMissingData: notBreaching
+
+  # Custom CloudWatch Dashboard
+  ServiceDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Condition: ShouldCreateServiceDashboard
+    Properties:
+      DashboardName: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-dashboard'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-dashboard'
+          - !Sub '${Environment}-${ServiceName}-dashboard'
+      DashboardBody: !Sub
+        - |
+          {
+            "widgets": [
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 0,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "metrics": [
+                    [ "AWS/ECS", "CPUUtilization", "ServiceName", "${ECSServiceName}", "ClusterName", "${ECSClusterName}" ],
+                    [ ".", "MemoryUtilization", ".", ".", ".", "." ]
+                  ],
+                  "period": 300,
+                  "stat": "Average",
+                  "region": "${AWS::Region}",
+                  "title": "${DisplayName} - Resource Utilization"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 12,
+                "y": 0,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "metrics": [
+                    [ "ECS/ContainerInsights", "RunningTaskCount", "ServiceName", "${ECSServiceName}", "ClusterName", "${ECSClusterName}" ],
+                    [ ".", "DesiredTaskCount", ".", ".", ".", "." ],
+                    [ ".", "PendingTaskCount", ".", ".", ".", "." ]
+                  ],
+                  "period": 300,
+                  "stat": "Average",
+                  "region": "${AWS::Region}",
+                  "title": "${DisplayName} - Task Count",
+                  "yAxis": {
+                    "left": {
+                      "min": 0
+                    }
+                  }
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 6,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "metrics": [
+                    [ "MSKConsumer", "msk.consumer.throughput" ],
+                    [ ".", "msk.messages.processed" ]
+                  ],
+                  "period": 300,
+                  "stat": "Average",
+                  "region": "${AWS::Region}",
+                  "title": "${DisplayName} - MSK Consumer Metrics",
+                  "yAxis": {
+                    "left": {
+                      "min": 0
+                    }
+                  }
+                }
+              },
+              {
+                "type": "metric",
+                "x": 12,
+                "y": 6,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "metrics": [
+                    [ "MSKConsumer", "msk.message.processing.time", { "stat": "Average" } ],
+                    [ "...", { "stat": "p95" } ],
+                    [ "...", { "stat": "p99" } ]
+                  ],
+                  "period": 300,
+                  "region": "${AWS::Region}",
+                  "title": "${DisplayName} - Processing Time (ms)",
+                  "yAxis": {
+                    "left": {
+                      "min": 0
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        - ECSServiceName: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}-${ServiceName}'
+              - !Sub '${Environment}-${ServiceName}'
+          ECSClusterName: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}'
+              - !Sub '${Environment}-microservices'
+          DisplayName: !If
+            - IsProductLevel
+            - !Sub '${DomainName}/${ProductName}/${ServiceName}'
+            - !If
+              - IsDomainLevel
+              - !Sub '${DomainName}/${ServiceName}'
+              - !Ref ServiceName
+
+Outputs:
+  DashboardURL:
+    Condition: ShouldCreateServiceDashboard
+    Description: CloudWatch Dashboard URL
+    Value: !Sub
+      - 'https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${DashboardName}'
+      - DashboardName: !If
+          - IsProductLevel
+          - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-dashboard'
+          - !If
+            - IsDomainLevel
+            - !Sub '${Environment}-${DomainName}-${ServiceName}-dashboard'
+            - !Sub '${Environment}-${ServiceName}-dashboard'
+    Export:
+      Name: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-DashboardURL'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-DashboardURL'
+          - !Sub '${Environment}-${ServiceName}-DashboardURL'

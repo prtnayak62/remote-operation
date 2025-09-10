@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'ECR Repository for Microservice Container Images (v7)'
+Description: 'ECR Repository for Microservice Container Images (v1-DDD)'
 
 Parameters:
   Environment:
@@ -10,16 +10,36 @@ Parameters:
   ServiceName:
     Type: String
     Description: Name of the microservice
+    
+  DomainName:
+    Type: String
+    Description: Domain name (e.g., customer, payment)
+    Default: ""
+    
+  ProductName:
+    Type: String
+    Description: Product name (optional)
+    Default: ""
 
 Conditions:
   IsProduction: !Equals [!Ref Environment, 'prod']
+  HasDomainName: !Not [!Equals [!Ref DomainName, ""]]
+  HasProductName: !Not [!Equals [!Ref ProductName, ""]]
+  IsDomainLevel: !And [!Condition HasDomainName, !Not [!Condition HasProductName]]
+  IsProductLevel: !And [!Condition HasDomainName, !Condition HasProductName]
 
 Resources:
   # ECR Repository
   ECRRepository:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: !Sub '${Environment}/${ServiceName}'
+      RepositoryName: !If
+        - IsProductLevel
+        - !Sub '${Environment}/${DomainName}/${ProductName}/${ServiceName}'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}/${DomainName}/${ServiceName}'
+          - !Sub '${Environment}/${ServiceName}'
       ImageTagMutability: MUTABLE
       ImageScanningConfiguration:
         ScanOnPush: true
@@ -61,23 +81,48 @@ Resources:
           }
       Tags:
         - Key: Name
-          Value: !Sub '${Environment}-${ServiceName}-ecr'
+          Value: !If
+            - IsProductLevel
+            - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-ecr'
+            - !If
+              - IsDomainLevel
+              - !Sub '${Environment}-${DomainName}-${ServiceName}-ecr'
+              - !Sub '${Environment}-${ServiceName}-ecr'
         - Key: Environment
           Value: !Ref Environment
+        - Key: Domain
+          Value: !If [HasDomainName, !Ref DomainName, "foundation"]
+        - !If
+          - HasProductName
+          - Key: Product
+            Value: !Ref ProductName
+          - !Ref "AWS::NoValue"
         - Key: Service
           Value: !Ref ServiceName
         - Key: Version
-          Value: v7
+          Value: v1-DDD
 
 Outputs:
   ECRRepositoryURI:
     Description: ECR Repository URI
     Value: !GetAtt ECRRepository.RepositoryUri
     Export:
-      Name: !Sub '${Environment}-${ServiceName}-ECRRepositoryURI'
+      Name: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-ECRRepositoryURI'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-ECRRepositoryURI'
+          - !Sub '${Environment}-${ServiceName}-ECRRepositoryURI'
 
   ECRRepositoryName:
     Description: ECR Repository Name
     Value: !Ref ECRRepository
     Export:
-      Name: !Sub '${Environment}-${ServiceName}-ECRRepositoryName'
+      Name: !If
+        - IsProductLevel
+        - !Sub '${Environment}-${DomainName}-${ProductName}-${ServiceName}-ECRRepositoryName'
+        - !If
+          - IsDomainLevel
+          - !Sub '${Environment}-${DomainName}-${ServiceName}-ECRRepositoryName'
+          - !Sub '${Environment}-${ServiceName}-ECRRepositoryName'

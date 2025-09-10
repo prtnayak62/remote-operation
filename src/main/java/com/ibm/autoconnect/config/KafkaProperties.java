@@ -12,11 +12,12 @@ import lombok.Setter;
 @Component
 public class KafkaProperties {
 
-	private String bootstrapServers;
+	private String mskClusterArn;
 	private String applicationId;
-	private String securityProtocol;
+	private String probeTopic;
 	private String alertTopic;
-	private String saslMechanism;
-	private String saslJaasConfig;
-	private String saslClientCallbackHandlerClass;
+	private String securityProtocol = "SASL_SSL";
+	private String saslMechanism = "AWS_MSK_IAM";
+	private String saslJaasConfig = "software.amazon.msk.auth.iam.IAMLoginModule required;";
+	private String saslClientCallbackHandlerClass = "software.amazon.msk.auth.iam.IAMClientCallbackHandler";
 }
