@@ -5,6 +5,7 @@ import java.util.HashMap;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.header.internals.RecordHeader;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -19,7 +20,8 @@ public class KafkaNotificationUtils {
 	 private KafkaNotificationUtils() {
     }
 
-	 public static void sendRemoteOperationNotification(CarProbePayload cb, Action action, String alertTopic, KafkaProducer<String, String> producer) {
+	public static void sendRemoteOperationNotification(CarProbePayload cb, Action action, String alertTopic,
+			KafkaProducer<String, String> producer, String trackId) {
 
 			//DevLogger.info("--------------------inside sendAlertNotification--------------");
 			JSONObject obj = new JSONObject();
@@ -178,6 +180,7 @@ public class KafkaNotificationUtils {
 
 			ProducerRecord<String, String> producerRecord = new ProducerRecord<>(alertTopic,
 					imeiKey, obj.toString());
+			producerRecord.headers().add(new RecordHeader("track_id", trackId.getBytes()));
 
 			producer.send(producerRecord, (RecordMetadata metadata, Exception exception) -> {
 				if (exception != null) {
