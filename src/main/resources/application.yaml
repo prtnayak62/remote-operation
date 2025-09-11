@@ -17,7 +17,7 @@ couchbase-properties:
   username: ${COUCHBASE_USERNAME}
   password: ${COUCHBASE_PASSWORD}
   bucket: ${COUCHBASE_BUCKET}
-  
+  ssl: false 
 redis-properties:
   host: ${REDIS_ENDPOINT:localhost}
   port: ${REDIS_PORT:6379}

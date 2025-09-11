@@ -41,7 +41,7 @@ public class CouchbaseConfiguration extends AbstractCouchbaseConfiguration {
     
     @Override
 	public ClusterEnvironment couchbaseClusterEnvironment() {
-		return ClusterEnvironment.builder().securityConfig(s -> s.enableTls(true)).build();
+		return ClusterEnvironment.builder().securityConfig(s -> s.enableTls(couchbaseProperties.isSsl())).build();
 	}
     
     @Override

@@ -16,4 +16,5 @@ public class CouchbaseProperties {
 	private String username;
 	private String password;
 	private String bucket;
+	private boolean ssl;
 }
