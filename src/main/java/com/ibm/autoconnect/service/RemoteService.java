@@ -82,7 +82,7 @@ public class RemoteService {
 	                List<Action> actions = rulesEngineProcessor.processRemoteRules(carProbePayload, vehiclePayload, remoteRulesLoader.getRemoteRules());
 	                this.processAction(actions,carProbePayload);
         	}
-                
+        	log.info("Successfully processed the data payload.");   
         } catch (Exception exception) {
             log.error("Exception occurred: ", exception);
         }
