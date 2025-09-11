@@ -128,6 +128,7 @@ public class Remote1402Message implements RemoteProcessor {
 				    props.setProperty(entry.getKey(), String.valueOf(entry.getValue()));
 				}	
 				   carProbePayload = CarProbePayload.builder().props(props).build();
+				   log.info("Successfully processed the data payload.");   
               // TODO: Fetch CarProbe data from DB
             
             

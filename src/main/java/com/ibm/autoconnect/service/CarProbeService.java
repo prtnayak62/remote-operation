@@ -39,7 +39,7 @@ public class CarProbeService {
             JsonObject existingDoc = result.contentAsObject();
 
             // Step 2: Get or create properties object
-            JsonObject props = existingDoc.getObject("properties");
+            JsonObject props = existingDoc.getObject("props");
             if (props == null) {
                 props = JsonObject.create();
             }

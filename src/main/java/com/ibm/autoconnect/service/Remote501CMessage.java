@@ -90,6 +90,7 @@ public class Remote501CMessage implements RemoteProcessor {
 				   carProbePayload = CarProbePayload.builder().props(props).build();
 
 			}
+	       log.info("Successfully processed the data payload.");
               // TODO: Fetch CarProbe data from DB
             
             
