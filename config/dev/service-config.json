@@ -29,7 +29,7 @@
                        },
     "TaskMemory":  1024,
     "MSKConfig":  {
-                      "ConsumerTopicName1":  "events-mngr-service-input",
+                      "ConsumerTopicName1":  "private-alerts",
                       "ProducerTopicName1":  "events-mngr-service-events"
                   },
     "ResourceAccess":  {

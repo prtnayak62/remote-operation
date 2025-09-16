@@ -80,7 +80,7 @@ public class RemoteService {
 	                VehiclePayload vehiclePayload = helper.getVehiclePayload(jsonObject.get("Vin").getAsString());
 	                log.info( " remoteRulesLoader.getRemoteRules() "+remoteRulesLoader.getRemoteRules());
 	                List<Action> actions = rulesEngineProcessor.processRemoteRules(carProbePayload, vehiclePayload, remoteRulesLoader.getRemoteRules());
-	                this.processAction(actions,carProbePayload);
+	                this.processAction(actions,carProbePayload, vehiclePayload.getContractId(),vehiclePayload.getVrn());
         	}
         	log.info("Successfully processed the data payload.");   
         } catch (Exception exception) {
@@ -95,7 +95,7 @@ public class RemoteService {
     }
         
         
-	public void processAction(List<Action> actions, CarProbePayload carProbePayload) {
+	public void processAction(List<Action> actions, CarProbePayload carProbePayload, String contractId, String vrn) {
 
 		for (Action act : actions) {
 			if (String.valueOf(act.getActionId()).equalsIgnoreCase(MSILConstants.REMOTECALLRESET_ACTION)) {
@@ -103,7 +103,7 @@ public class RemoteService {
 				vaService.setRemoteProps(carProbePayload.getProps().getProperty(VIN_ID),
 						carProbePayload.getProps().getProperty("xtransactionid"));
 				KafkaNotificationUtils.sendRemoteOperationNotification(carProbePayload, act,
-						kafkaProperties.getAlertTopic(), producer, metadata.getTrackId());
+						kafkaProperties.getAlertTopic(), producer, metadata.getTrackId(), contractId, vrn);
 			}
 		}
 	}

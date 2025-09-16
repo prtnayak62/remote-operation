@@ -21,7 +21,7 @@ public class Vehicle {
 
 	@Id
 	@GeneratedValue(strategy = GenerationStrategy.UNIQUE)
-	private String vin;
+	private String vinId;
 	private String contractId;
 	private long nVehicleId;
 	private String vehicleId;
