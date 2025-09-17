@@ -189,6 +189,10 @@ public class KafkaNotificationUtils {
 		JSONObject json = new JSONObject();
 		String operationType = event.getString("operation_type");
 		String operationResult = event.getString("operation_result").split(":")[0];
+		String type = "";
+		if (operationType.contains("ACON") || operationType.contains("ACOFF")) {
+			type = operationType.contains("ACON") ? "ACON" : "ACOFF";
+		}
 
 		json.put("notificationType", event.get("event_type"));
 		json.put("vinId", vinId);
@@ -202,10 +206,9 @@ public class KafkaNotificationUtils {
 			if (event.has("longitude")) {
 				data.put("long", event.get("longitude"));
 			}
-			data.put("title", "Climate Control ON Request Status");
 			if (operationResult.equals("01")) {
-				data.put("message",
-						"A/C started for " + vrn + " with target temp. as " + event.getString("temprature") + "°C.");
+				data.put("operation_type", type);
+				data.put("temperature", event.getString("temperature"));
 			}
 			data.put("transactionid", event.get("transactionid"));
 			data.put("status", event.get("status"));
@@ -224,8 +227,9 @@ public class KafkaNotificationUtils {
 		} else {
 			obj.put("contract_id", cb.getProps().getProperty("VEHICLE_IDENTITY"));
 		}
-		obj.put("latitude", cb.getLatitude());
-		obj.put("longitude", cb.getLongitude());
+		obj.put("temperature", objMap.get("temperature"));
+		obj.put("latitude", cb.getProps().getProperty("latitude"));
+		obj.put("longitude", cb.getProps().getProperty("longitude"));
 		obj.put("tscgwtime", cb.getProps().getProperty("ts"));
 		obj.put("occurencetime", cb.getProps().getProperty("OccurrenceTime"));
 

@@ -13,7 +13,7 @@ public class MSILConstants {
 	public static final String RETURN_CODE     = "ReturnCd";
 
 	public static final String IS_NOTIFIED     = "IsNotified";
-	public static final String OPERATION_TYPE     = "OperationType";
+	public static final String OPERATION_TYPE     = "operation_type";
 
 	public static final String ISO_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 

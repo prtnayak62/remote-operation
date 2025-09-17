@@ -66,7 +66,7 @@
                             "Level":  "foundation",
                             "Collection":  "events-mngr-service"
                         },
-    "HealthCheckProtocol":  "HTTP",
+    "HealthCheckProtocol":  "TCP",
     "Security":  {
                      "RunAsNonRoot":  false,
                      "ReadonlyRootFilesystem":  false
@@ -75,7 +75,7 @@
     "MaxCapacity":  5,
     "ProductName":  "events-sync-mgmt",
     "ServicePort":  9092,
-    "HealthCheckPath":  "/actuator/health",
+    "HealthCheckPath":  "/health",
     "CreateMonitoring":  "false",
     "FullServiceName":  "events-events-sync-mgmt-events-mngr-service",
     "DomainName":  "events",

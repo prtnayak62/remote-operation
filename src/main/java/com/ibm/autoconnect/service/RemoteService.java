@@ -3,7 +3,7 @@ package com.ibm.autoconnect.service;
 import static com.ibm.autoconnect.rule.constants.TripRuleConstants.VIN_ID;
 
 import java.util.List;
-import java.util.Properties;
+import java.util.Optional;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.slf4j.MDC;
@@ -14,8 +14,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.ibm.autoconnect.config.KafkaProperties;
+import com.ibm.autoconnect.entity.Vehicle;
 import com.ibm.autoconnect.model.Metadata;
 import com.ibm.autoconnect.model.RemoteResponseModel;
+import com.ibm.autoconnect.repository.VehicleRepository;
 import com.ibm.autoconnect.rule.action.Action;
 import com.ibm.autoconnect.rule.model.CarProbePayload;
 import com.ibm.autoconnect.rule.model.VehiclePayload;
@@ -28,73 +30,73 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class RemoteService {
-	
+
 	private final KafkaProperties kafkaProperties;
 	private final KafkaProducer<String, String> producer;
-    private final ApplicationContext context;
-    private final Metadata metadata;
-    private final RulesEngineProcessor rulesEngineProcessor;
-    private final RemoteRulesLoader remoteRulesLoader;
-    private final VAService vaService;
-    private final RemoteServiceHelper helper;
-    
-	
+	private final ApplicationContext context;
+	private final Metadata metadata;
+	private final RulesEngineProcessor rulesEngineProcessor;
+	private final RemoteRulesLoader remoteRulesLoader;
+	private final VAService vaService;
+	private final VehicleRepository repository;
+	private final ObjectMapper mapper;
 
 	public RemoteService(KafkaProperties kafkaProperties, KafkaProducer<String, String> producer, VAService vaService,
 			Metadata metadata, ApplicationContext context, RulesEngineProcessor rulesEngineProcessor,
-			RemoteRulesLoader remoteRulesLoader, RemoteServiceHelper helper) {
-        this.kafkaProperties = kafkaProperties;
-        this.producer = producer;
-    	this.metadata = metadata;
-        this.context = context;
-        this.rulesEngineProcessor=rulesEngineProcessor;
-        this.remoteRulesLoader= remoteRulesLoader;
-        this.vaService=vaService;
-        this.helper = helper;
-    }
+			RemoteRulesLoader remoteRulesLoader, VehicleRepository repository, ObjectMapper mapper) {
+		this.kafkaProperties = kafkaProperties;
+		this.producer = producer;
+		this.metadata = metadata;
+		this.context = context;
+		this.rulesEngineProcessor = rulesEngineProcessor;
+		this.remoteRulesLoader = remoteRulesLoader;
+		this.vaService = vaService;
+		this.repository = repository;
+		this.mapper = mapper;
+	}
 
-    public RemoteResponseModel processRemote(List<String> data) {
-        try {
-        	log.info("Data Size: {}", data.size());
-        	for (String payload : data) {
-        		JsonObject jsonObject = JsonParser.parseString(payload).getAsJsonObject();
-        		
-        		String messageId = jsonObject.get("message_id").getAsString();
-        		String vin = jsonObject.get("Vin").getAsString();
-        		String occurrenceTime = jsonObject.get("RemoteControlResult").getAsJsonObject().get("OccurrenceTime").getAsString();
-        		String trackId = String.join("-", vin, messageId, occurrenceTime);
-        		metadata.setTrackId(trackId);
-        		
-        		MDC.put("track_id", metadata.getTrackId());
-        		
-        		log.info("Payload of remote service {}", jsonObject);
-        		
-        		RemoteProcessor remoteProcessor = null;
-				CarProbePayload carProbePayload=null;
-				if(messageId.equals("FT501C")) {
-	                 remoteProcessor = context.getBean(messageId, RemoteProcessor.class);
-	                }else if(messageId.equals("SSPICN1402")) {
-	                	remoteProcessor = context.getBean(messageId, RemoteProcessor.class);
-	                }
-	                carProbePayload=remoteProcessor.processMessage(jsonObject);
-	                VehiclePayload vehiclePayload = helper.getVehiclePayload(jsonObject.get("Vin").getAsString());
-	                log.info( " remoteRulesLoader.getRemoteRules() "+remoteRulesLoader.getRemoteRules());
-	                List<Action> actions = rulesEngineProcessor.processRemoteRules(carProbePayload, vehiclePayload, remoteRulesLoader.getRemoteRules());
-	                this.processAction(actions,carProbePayload, vehiclePayload.getContractId(),vehiclePayload.getVrn());
-        	}
-        	log.info("Successfully processed the data payload.");   
-        } catch (Exception exception) {
-            log.error("Exception occurred: ", exception);
-        }
+	public RemoteResponseModel processRemote(List<String> data) {
+		try {
+			log.info("Data Size: {}", data.size());
+			for (String payload : data) {
+				JsonObject jsonObject = JsonParser.parseString(payload).getAsJsonObject();
 
-        return RemoteResponseModel.builder()
-                .result("DONE")
-                .statusCode(200)
-                .message("Operation successful")
-                .build();
-    }
-        
-        
+				String messageId = jsonObject.get("message_id").getAsString();
+				String vin = jsonObject.get("Vin").getAsString();
+				String occurrenceTime = jsonObject.get("RemoteControlResult").getAsJsonObject().get("OccurrenceTime")
+						.getAsString();
+				String trackId = String.join("-", vin, messageId, occurrenceTime);
+				metadata.setTrackId(trackId);
+
+				MDC.put("track_id", metadata.getTrackId());
+
+				log.info("Payload of remote service {}", jsonObject);
+
+				RemoteProcessor remoteProcessor = null;
+				CarProbePayload carProbePayload = null;
+				if (messageId.equals("FT501C")) {
+					remoteProcessor = context.getBean(messageId, RemoteProcessor.class);
+				} else if (messageId.equals("SSPICN1402")) {
+					remoteProcessor = context.getBean(messageId, RemoteProcessor.class);
+				}
+				carProbePayload = remoteProcessor.processMessage(jsonObject);
+				Optional<Vehicle> vehicleOptional = repository.findById(jsonObject.get("Vin").getAsString());
+				Vehicle vehicle = vehicleOptional.orElseGet(Vehicle::new);
+				VehiclePayload vehiclePayload = mapper.convertValue(vehicle, VehiclePayload.class);
+				
+				log.info(" remoteRulesLoader.getRemoteRules() " + remoteRulesLoader.getRemoteRules());
+				List<Action> actions = rulesEngineProcessor.processRemoteRules(carProbePayload, vehiclePayload,
+						remoteRulesLoader.getRemoteRules());
+				this.processAction(actions, carProbePayload, vehiclePayload.getContractId(), vehiclePayload.getVrn());
+			}
+			log.info("Successfully processed the data payload.");
+		} catch (Exception exception) {
+			log.error("Exception occurred: ", exception);
+		}
+
+		return RemoteResponseModel.builder().result("DONE").statusCode(200).message("Operation successful").build();
+	}
+
 	public void processAction(List<Action> actions, CarProbePayload carProbePayload, String contractId, String vrn) {
 
 		for (Action act : actions) {
@@ -107,5 +109,5 @@ public class RemoteService {
 			}
 		}
 	}
-    
+
 }

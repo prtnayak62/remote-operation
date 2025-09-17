@@ -56,8 +56,9 @@ public class CarProbeService {
                         // → update/add inside properties
                         props.put(key, value);
                     }
-            	props.put(entry.getKey(), entry.getValue()); // Overwrites if exists, adds if new
             }
+            
+            existingDoc.put("props", props);
 
             // Step 3: Replace in Couchbase
             MutationResult mutation = collection.replace(docId, existingDoc);
