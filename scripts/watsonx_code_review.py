@@ -126,7 +126,10 @@ Files to review:
         
         for file_info in files[:10]:  # Limit to 10 files
             prompt += f"\n\n--- File: {file_info['path']} ---\n"
-            prompt += f"Diff:\n{file_info['diff'][:2000]}\n"  # Limit diff size
+            if file_info.get('diff'):
+                prompt += f"Diff:\n{file_info['diff'][:2000]}\n"  # Limit diff size
+            else:
+                prompt += f"Content:\n{file_info.get('content', '')[:2000]}\n"
         
         prompt += """
 
