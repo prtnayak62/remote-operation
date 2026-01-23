@@ -76,4 +76,70 @@ public class RemoteUtils {
 		}
 		return null;
 	}
+    public int x1(int a, int b, int c, String s, int[] arr) {
+
+        int r = 0;
+
+        if (a > 0) {
+            if (b > 0) {
+                if (c > 0) {
+                    if (s != null) {
+                        if (s.length() > 0) {
+                            for (int i = 0; i < arr.length; i++) {
+                                if (arr[i] > 0) {
+                                    if (arr[i] % 2 == 0) {
+                                        r = r + arr[i];
+                                    } else {
+                                        r = r + 1;
+                                    }
+                                } else {
+                                    r = r - 1;
+                                }
+                            }
+                        } else {
+                            r = r + 100;
+                        }
+                    } else {
+                        r = r - 100;
+                    }
+                } else {
+                    r = r + 50;
+                }
+            } else {
+                r = r - 50;
+            }
+        } else {
+            r = 0;
+        }
+
+        // duplicate useless loop
+        for (int i = 0; i < arr.length; i++) {
+            if (arr[i] > 10) {
+                r = r + 10;
+            }
+            if (arr[i] > 10) {   // duplicate condition
+                r = r + 10;
+            }
+            if (arr[i] < 0) {
+                r = r - 5;
+            }
+        }
+
+        if (r > 1000) {
+            r = 999;
+        } else if (r > 500) {
+            r = 888;
+        } else if (r > 100) {
+            r = 777;
+        } else if (r > 10) {
+            r = 666;
+        } else if (r > 1) {
+            r = 555;
+        } else {
+            r = 0;
+        }
+
+        return r;
+    }
+
 }
