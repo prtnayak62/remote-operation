@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Pipeline Report Generator
 Creates comprehensive HTML reports from review and quality gate results
@@ -7,8 +8,15 @@ Creates comprehensive HTML reports from review and quality gate results
 import argparse
 import json
 import sys
+import os
 from datetime import datetime
 from typing import Dict, Any
+
+# Fix Windows console encoding for emojis
+if sys.platform == 'win32':
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
 
 class ReportGenerator:
