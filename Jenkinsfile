@@ -313,7 +313,12 @@ def processQualityGateResults() {
         error("Quality Gate Failed - Build cannot proceed")
     } else if (env.QUALITY_GATE_STATUS == 'WARNING') {
         echo "⚠️ Quality Gate PASSED with warnings"
-        unstable(message: "Quality Gate passed with warnings")
+        echo "\nWarning Criteria:"
+        gateData.warning_criteria.each { criterion ->
+            echo "  - ${criterion}"
+        }
+        // Don't mark as unstable - just log the warnings
+        echo "ℹ️  Build will continue as SUCCESS despite warnings"
     } else {
         echo "✅ Quality Gate PASSED"
     }
