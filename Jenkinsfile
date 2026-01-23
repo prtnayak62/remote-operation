@@ -5,7 +5,7 @@ pipeline {
         // watsonx.ai Configuration
         WATSONX_API_KEY = credentials('watsonx-api-key')
         WATSONX_PROJECT_ID = credentials('watsonx-project-id')
-        WATSONX_API_URL = 'https://ca-tor.ml.cloud.ibm.com'
+        WATSONX_API_URL = 'https://us-south.ml.cloud.ibm.com'
         
         // Quality Gate Thresholds
         CODE_QUALITY_THRESHOLD = '70'
