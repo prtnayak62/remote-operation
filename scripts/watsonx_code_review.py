@@ -181,29 +181,62 @@ Respond in JSON format:
         }
         
         payload = {
-            "model_id": "ibm/granite-13b-chat-v2",
+            "model_id": "google/flan-t5-xxl",
             "input": prompt,
             "parameters": {
                 "decoding_method": "greedy",
-                "max_new_tokens": 2000,
-                "temperature": 0.3,
-                "top_p": 0.9
+                "max_new_tokens": 200,
+                "min_new_tokens": 0,
+                "stop_sequences": [],
+                "repetition_penalty": 1
             },
             "project_id": self.project_id
         }
         
-        endpoint = f"{self.api_url}/ml/v1/text/generation?version=2023-05-29"
+        # Try different endpoint formats based on API URL
+        if "ml.cloud.ibm.com" in self.api_url:
+            # Standard WatsonX endpoint
+            endpoint = f"{self.api_url}/ml/v1/text/generation?version=2023-05-29"
+        else:
+            # Alternative endpoint format
+            endpoint = f"{self.api_url}/ml/v1/text/generation?version=2023-05-29"
         
         print(f"Calling WatsonX API: {endpoint}")
-        response = requests.post(
-            endpoint,
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
+        print(f"Model: ibm/granite-13b-chat-v2")
+        print(f"Project ID: {self.project_id[:8]}...{self.project_id[-4:]}")
         
-        response.raise_for_status()
-        return response.json()
+        response = None
+        try:
+            response = requests.post(
+                endpoint,
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+            
+            print(f"Response Status: {response.status_code}")
+            
+            if response.status_code == 404:
+                print(f"❌ 404 Error - Endpoint not found")
+                print(f"Response: {response.text[:500]}")
+                print(f"\nTroubleshooting:")
+                print(f"1. Check if your WatsonX instance is in the correct region")
+                print(f"2. Verify the API URL in Jenkins credentials")
+                print(f"3. Common URLs:")
+                print(f"   - US South: https://us-south.ml.cloud.ibm.com")
+                print(f"   - Dallas: https://us-south.ml.cloud.ibm.com")
+                print(f"   - Frankfurt: https://eu-de.ml.cloud.ibm.com")
+                print(f"   - Tokyo: https://jp-tok.ml.cloud.ibm.com")
+                print(f"   - London: https://eu-gb.ml.cloud.ibm.com")
+            
+            response.raise_for_status()
+            return response.json()
+            
+        except requests.exceptions.HTTPError as e:
+            print(f"HTTP Error: {e}")
+            if response:
+                print(f"Response content: {response.text[:1000]}")
+            raise
     
     def _parse_watsonx_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
         """Parse watsonx.ai response"""
