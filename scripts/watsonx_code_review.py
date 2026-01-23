@@ -29,10 +29,31 @@ class WatsonXCodeReviewer:
         self.project_id = project_id
         self.api_url = api_url
         self.review_depth = "STANDARD"
+        self.access_token = None
         self.headers = {
-            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
+    
+    def _get_iam_token(self) -> str:
+        """Generate IAM access token from API key"""
+        try:
+            token_url = "https://iam.cloud.ibm.com/identity/token"
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+            data = {
+                "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
+                "apikey": self.api_key
+            }
+            
+            response = requests.post(token_url, headers=headers, data=data, timeout=30)
+            response.raise_for_status()
+            
+            token_data = response.json()
+            return token_data["access_token"]
+        except Exception as e:
+            print(f"Error generating IAM token: {e}")
+            raise
     
     def get_changed_files(self, commit: str) -> List[Dict[str, Any]]:
         """Get list of changed files in the commit"""
@@ -141,7 +162,20 @@ Respond in JSON format:
             return self._generate_mock_review(files, review_depth)
     
     def _call_watsonx_api(self, prompt: str) -> Dict[str, Any]:
-        """Call watsonx.ai API"""
+        """Call watsonx.ai API with IAM token authentication"""
+        
+        # Generate IAM token if not already generated
+        if not self.access_token:
+            print("Generating IAM access token...")
+            self.access_token = self._get_iam_token()
+            print("✓ IAM token generated successfully")
+        
+        # Update headers with access token
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
         
         payload = {
             "model_id": "ibm/granite-13b-chat-v2",
@@ -157,9 +191,10 @@ Respond in JSON format:
         
         endpoint = f"{self.api_url}/ml/v1/text/generation?version=2023-05-29"
         
+        print(f"Calling WatsonX API: {endpoint}")
         response = requests.post(
             endpoint,
-            headers=self.headers,
+            headers=headers,
             json=payload,
             timeout=60
         )
@@ -284,7 +319,7 @@ def main():
     parser.add_argument("--api-key", required=True, help="watsonx.ai API key")
     parser.add_argument("--project-id", required=True, help="watsonx.ai Project ID")
     parser.add_argument("--api-url", required=True, help="watsonx.ai API URL")
-    parser.add_argument("--review-depth", choices=["QUICK", "STANDARD", "COMPREHENSIVE"], 
+    parser.add_argument("--review-depth", choices=["QUICK", "STANDARD", "COMPREHENSIVE"],
                        default="STANDARD", help="Review depth")
     parser.add_argument("--commit", required=True, help="Git commit hash")
     parser.add_argument("--output-file", default="review-report.json", help="Output file path")
@@ -294,6 +329,26 @@ def main():
     print("🤖 Starting watsonx.ai Code Review...")
     print(f"   Commit: {args.commit}")
     print(f"   Review Depth: {args.review_depth}")
+    print(f"   API URL: {args.api_url}")
+    
+    # Print credentials for verification (masked for security)
+    api_key_masked = args.api_key[:8] + "..." + args.api_key[-4:] if len(args.api_key) > 12 else "***"
+    project_id_masked = args.project_id[:8] + "..." + args.project_id[-4:] if len(args.project_id) > 12 else "***"
+    
+    print(f"\n🔑 Credentials Check:")
+    print(f"   API Key: {api_key_masked} (length: {len(args.api_key)} chars)")
+    print(f"   Project ID: {project_id_masked} (length: {len(args.project_id)} chars)")
+    
+    # Validate format
+    if len(args.api_key) < 20:
+        print("   ⚠️  WARNING: API key seems too short!")
+    else:
+        print("   ✓ API key length looks good")
+    
+    if '-' in args.project_id and len(args.project_id) == 36:
+        print("   ✓ Project ID format looks good (UUID format)")
+    else:
+        print("   ⚠️  WARNING: Project ID doesn't look like a UUID!")
     
     # Initialize reviewer
     reviewer = WatsonXCodeReviewer(args.api_key, args.project_id, args.api_url)
