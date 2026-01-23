@@ -58,11 +58,13 @@ class WatsonXCodeReviewer:
     def get_changed_files(self, commit: str) -> List[Dict[str, Any]]:
         """Get list of changed files in the commit"""
         try:
-            # Get changed files
+            # Get changed files with UTF-8 encoding
             result = subprocess.run(
                 ["git", "diff", "--name-only", f"{commit}~1", commit],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='replace',
                 check=True
             )
             
@@ -73,18 +75,34 @@ class WatsonXCodeReviewer:
                 if not file_path:
                     continue
                 
-                # Get file diff
+                # Get file diff with UTF-8 encoding
                 diff_result = subprocess.run(
                     ["git", "diff", f"{commit}~1", commit, "--", file_path],
                     capture_output=True,
                     text=True,
+                    encoding='utf-8',
+                    errors='replace',
                     check=True
                 )
                 
-                # Read current file content
+                # Read current file content with multiple encoding attempts
+                content = ""
                 try:
+                    # Try UTF-8 first
                     with open(file_path, 'r', encoding='utf-8') as f:
                         content = f.read()
+                except UnicodeDecodeError:
+                    try:
+                        # Try with latin-1 as fallback
+                        with open(file_path, 'r', encoding='latin-1') as f:
+                            content = f.read()
+                    except Exception:
+                        try:
+                            # Last resort: read as binary and decode with errors='replace'
+                            with open(file_path, 'rb') as f:
+                                content = f.read().decode('utf-8', errors='replace')
+                        except Exception as e:
+                            content = f"Error reading file: {str(e)}"
                 except Exception as e:
                     content = f"Error reading file: {str(e)}"
                 
@@ -106,54 +124,51 @@ class WatsonXCodeReviewer:
         
         # Prepare prompt based on review depth
         depth_prompts = {
-            "QUICK": "Perform a quick code review focusing on critical issues only.",
+            "QUICK": "Perform a quick code review focusing on critical issues only. Be concise.",
             "STANDARD": "Perform a standard code review covering code quality, security, and best practices.",
             "COMPREHENSIVE": "Perform a comprehensive code review including code quality, security, performance, maintainability, and architectural concerns."
         }
         
-        prompt = f"""
-You are an expert code reviewer. {depth_prompts.get(review_depth, depth_prompts['STANDARD'])}
-
-Analyze the following code changes and provide:
-1. Code Quality Score (0-100)
-2. Security Score (0-100)
-3. Maintainability Score (0-100)
-4. List of issues found (with severity: CRITICAL, HIGH, MEDIUM, LOW)
-5. Recommendations for improvement
-
-Files to review:
-"""
+        # Build a more focused prompt for better results
+        file_summaries = []
+        for file_info in files[:5]:  # Limit to 5 files for better performance
+            file_type = file_info['extension']
+            file_name = file_info['path']
+            
+            # Use diff if available, otherwise use content (limited)
+            code_snippet = file_info.get('diff', file_info.get('content', ''))[:1500]
+            
+            file_summaries.append(f"File: {file_name} ({file_type})\n{code_snippet}")
         
-        for file_info in files[:10]:  # Limit to 10 files
-            prompt += f"\n\n--- File: {file_info['path']} ---\n"
-            if file_info.get('diff'):
-                prompt += f"Diff:\n{file_info['diff'][:2000]}\n"  # Limit diff size
-            else:
-                prompt += f"Content:\n{file_info.get('content', '')[:2000]}\n"
-        
-        prompt += """
+        prompt = f"""You are an expert code reviewer specializing in {', '.join(set(f['extension'] for f in files))} code.
 
-Respond in JSON format:
-{
-    "scores": {
-        "code_quality": <0-100>,
-        "security": <0-100>,
-        "maintainability": <0-100>,
-        "overall": <0-100>
-    },
+{depth_prompts.get(review_depth, depth_prompts['STANDARD'])}
+
+Code to review:
+{chr(10).join(file_summaries)}
+
+Provide your analysis in this EXACT JSON format (no extra text):
+{{
+    "scores": {{
+        "code_quality": 75,
+        "security": 80,
+        "maintainability": 70,
+        "overall": 75
+    }},
     "issues": [
-        {
-            "severity": "CRITICAL|HIGH|MEDIUM|LOW",
-            "file": "path/to/file",
-            "line": <line_number>,
-            "message": "description",
-            "recommendation": "how to fix"
-        }
+        {{
+            "severity": "HIGH",
+            "file": "example.java",
+            "line": 10,
+            "message": "Issue description",
+            "recommendation": "How to fix"
+        }}
     ],
-    "summary": "overall assessment",
-    "recommendations": ["list of general recommendations"]
-}
-"""
+    "summary": "Brief overall assessment",
+    "recommendations": ["Recommendation 1", "Recommendation 2"]
+}}
+
+Respond ONLY with valid JSON, no other text."""
         
         # Call watsonx.ai API
         try:
@@ -161,6 +176,7 @@ Respond in JSON format:
             return self._parse_watsonx_response(response)
         except Exception as e:
             print(f"Error calling watsonx.ai API: {e}")
+            print(f"Falling back to local code analysis...")
             # Return mock data for demonstration
             return self._generate_mock_review(files, review_depth)
     
@@ -185,11 +201,12 @@ Respond in JSON format:
             "input": prompt,
             "parameters": {
                 "decoding_method": "greedy",
-                "max_new_tokens": 2000,
-                "min_new_tokens": 0,
-                "temperature": 0.3,
-                "top_p": 0.9,
-                "repetition_penalty": 1.1
+                "max_new_tokens": 1500,  # Reduced for faster response
+                "min_new_tokens": 100,
+                "temperature": 0.2,  # Lower temperature for more focused output
+                "top_p": 0.85,
+                "repetition_penalty": 1.05,
+                "stop_sequences": ["\n\n\n"]  # Stop at multiple newlines
             },
             "project_id": self.project_id
         }
@@ -203,8 +220,9 @@ Respond in JSON format:
             endpoint = f"{self.api_url}/ml/v1/text/generation?version=2023-05-29"
         
         print(f"Calling WatsonX API: {endpoint}")
-        print(f"Model: ibm/granite-13b-chat-v2")
+        print(f"Model: meta-llama/llama-3-3-70b-instruct")
         print(f"Project ID: {self.project_id[:8]}...{self.project_id[-4:]}")
+        print(f"Timeout: 120 seconds")
         
         response = None
         try:
@@ -212,7 +230,7 @@ Respond in JSON format:
                 endpoint,
                 headers=headers,
                 json=payload,
-                timeout=60
+                timeout=120  # Increased timeout to 120 seconds
             )
             
             print(f"Response Status: {response.status_code}")
