@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-01-22T10:44:37.823249",
+  "status": "WARNING",
+  "message": "Quality Gate PASSED with warnings: 3 criteria close to threshold",
+  "scores": {
+    "code_quality": 75,
+    "security": 85,
+    "maintainability": 80
+  },
+  "thresholds": {
+    "code_quality": 70,
+    "security": 80,
+    "maintainability": 75
+  },
+  "failed_criteria": [],
+  "warning_criteria": [
+    "code_quality: 75/100 (threshold: 70/100, margin: 5)",
+    "security: 85/100 (threshold: 80/100, margin: 5)",
+    "maintainability: 80/100 (threshold: 75/100, margin: 5)"
+  ],
+  "passed_criteria": [],
+  "details": {
+    "code_quality": {
+      "status": "WARNING",
+      "score": 75,
+      "threshold": 70,
+      "margin": 5
+    },
+    "security": {
+      "status": "WARNING",
+      "score": 85,
+      "threshold": 80,
+      "margin": 5
+    },
+    "maintainability": {
+      "status": "WARNING",
+      "score": 80,
+      "threshold": 75,
+      "margin": 5
+    }
+  }
+}
