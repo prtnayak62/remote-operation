@@ -181,14 +181,15 @@ Respond in JSON format:
         }
         
         payload = {
-            "model_id": "google/flan-t5-xxl",
+            "model_id": "meta-llama/llama-3-3-70b-instruct",
             "input": prompt,
             "parameters": {
                 "decoding_method": "greedy",
-                "max_new_tokens": 200,
+                "max_new_tokens": 2000,
                 "min_new_tokens": 0,
-                "stop_sequences": [],
-                "repetition_penalty": 1
+                "temperature": 0.3,
+                "top_p": 0.9,
+                "repetition_penalty": 1.1
             },
             "project_id": self.project_id
         }
