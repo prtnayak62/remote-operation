@@ -13,7 +13,7 @@ pipeline {
         MAINTAINABILITY_THRESHOLD = '75'
         
         // Build Configuration
-        BUILD_TIMESTAMP = sh(script: "date +%Y%m%d-%H%M%S", returnStdout: true).trim()
+        BUILD_TIMESTAMP = "${new Date().format('yyyyMMdd-HHmmss')}"
     }
     
     parameters {
@@ -29,10 +29,25 @@ pipeline {
                     echo "🔄 Checking out code..."
                     checkout scm
                     
-                    // Get commit information
-                    env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    env.GIT_COMMIT_MSG = sh(script: "git log -1 --pretty=%B", returnStdout: true).trim()
-                    env.GIT_AUTHOR = sh(script: "git log -1 --pretty=%an", returnStdout: true).trim()
+                    // Get commit information (Windows compatible)
+                    bat '''
+                        @echo off
+                        for /f "tokens=*" %%i in ('git rev-parse --short HEAD') do set GIT_COMMIT_SHORT=%%i
+                        echo %GIT_COMMIT_SHORT% > commit_short.txt
+                        
+                        for /f "tokens=*" %%i in ('git log -1 --pretty=%%B') do set GIT_COMMIT_MSG=%%i
+                        echo %GIT_COMMIT_MSG% > commit_msg.txt
+                        
+                        for /f "tokens=*" %%i in ('git log -1 --pretty=%%an') do set GIT_AUTHOR=%%i
+                        echo %GIT_AUTHOR% > commit_author.txt
+                    '''
+                    
+                    env.GIT_COMMIT_SHORT = readFile('commit_short.txt').trim()
+                    env.GIT_COMMIT_MSG = readFile('commit_msg.txt').trim()
+                    env.GIT_AUTHOR = readFile('commit_author.txt').trim()
+                    
+                    echo "Commit: ${env.GIT_COMMIT_SHORT}"
+                    echo "Author: ${env.GIT_AUTHOR}"
                 }
             }
         }
@@ -42,13 +57,15 @@ pipeline {
                 script {
                     echo "📊 Running pre-build analysis..."
                     
-                    // Count files and lines of code
-                    sh '''
-                        echo "Files changed in this commit:"
-                        git diff --name-only HEAD~1 HEAD || echo "Initial commit"
+                    // Count files and lines of code (Windows compatible)
+                    bat '''
+                        @echo off
+                        echo Files changed in this commit:
+                        git diff --name-only HEAD~1 HEAD 2>nul || echo Initial commit
                         
-                        echo "\nTotal lines of code:"
-                        find . -name "*.java" -o -name "*.py" -o -name "*.js" -o -name "*.ts" | xargs wc -l | tail -1 || echo "0"
+                        echo.
+                        echo Total lines of code:
+                        dir /s /b *.java *.py *.js *.ts 2>nul | find /c /v "" || echo 0
                     '''
                 }
             }
@@ -62,15 +79,16 @@ pipeline {
                     // Prepare code review request
                     def reviewDepth = params.REVIEW_DEPTH
                     
-                    // Call watsonx.ai agent for code review
-                    def reviewResult = sh(
+                    // Call watsonx.ai agent for code review (Windows compatible)
+                    def reviewResult = bat(
                         script: """
-                            python3 scripts/watsonx_code_review.py \
-                                --api-key "\${WATSONX_API_KEY}" \
-                                --project-id "\${WATSONX_PROJECT_ID}" \
-                                --api-url "\${WATSONX_API_URL}" \
-                                --review-depth "${reviewDepth}" \
-                                --commit "\${GIT_COMMIT_SHORT}" \
+                            @echo off
+                            python scripts\\watsonx_code_review.py ^
+                                --api-key "%WATSONX_API_KEY%" ^
+                                --project-id "%WATSONX_PROJECT_ID%" ^
+                                --api-url "%WATSONX_API_URL%" ^
+                                --review-depth "${reviewDepth}" ^
+                                --commit "%GIT_COMMIT_SHORT%" ^
                                 --output-file "review-report.json"
                         """,
                         returnStatus: true
@@ -115,16 +133,17 @@ pipeline {
                     def secThreshold = SECURITY_THRESHOLD.toInteger()
                     def maintThreshold = MAINTAINABILITY_THRESHOLD.toInteger()
                     
-                    // Evaluate quality gate
-                    def qualityGateResult = sh(
+                    // Evaluate quality gate (Windows compatible)
+                    def qualityGateResult = bat(
                         script: """
-                            python3 scripts/quality_gate.py \
-                                --code-quality-score ${env.CODE_QUALITY_SCORE} \
-                                --security-score ${env.SECURITY_SCORE} \
-                                --maintainability-score ${env.MAINTAINABILITY_SCORE} \
-                                --code-threshold ${codeThreshold} \
-                                --security-threshold ${secThreshold} \
-                                --maintainability-threshold ${maintThreshold} \
+                            @echo off
+                            python scripts\\quality_gate.py ^
+                                --code-quality-score ${env.CODE_QUALITY_SCORE} ^
+                                --security-score ${env.SECURITY_SCORE} ^
+                                --maintainability-score ${env.MAINTAINABILITY_SCORE} ^
+                                --code-threshold ${codeThreshold} ^
+                                --security-threshold ${secThreshold} ^
+                                --maintainability-threshold ${maintThreshold} ^
                                 --output-file "quality-gate-result.json"
                         """,
                         returnStatus: true
@@ -165,18 +184,19 @@ pipeline {
                     echo "🔨 Building application..."
                     
                     // Example build commands (customize based on your project)
-                    sh '''
-                        # Java/Maven example
-                        # mvn clean package -DskipTests
+                    bat '''
+                        @echo off
+                        REM Java/Maven example
+                        REM mvn clean package -DskipTests
                         
-                        # Node.js example
-                        # npm install && npm run build
+                        REM Node.js example
+                        REM npm install && npm run build
                         
-                        # Python example
-                        # pip install -r requirements.txt
-                        # python setup.py build
+                        REM Python example
+                        REM pip install -r requirements.txt
+                        REM python setup.py build
                         
-                        echo "Build completed successfully"
+                        echo Build completed successfully
                     '''
                 }
             }
@@ -190,13 +210,14 @@ pipeline {
                 script {
                     echo "🧪 Running tests..."
                     
-                    sh '''
-                        # Run your test suite
-                        # mvn test
-                        # npm test
-                        # pytest
+                    bat '''
+                        @echo off
+                        REM Run your test suite
+                        REM mvn test
+                        REM npm test
+                        REM pytest
                         
-                        echo "Tests completed"
+                        echo Tests completed
                     '''
                 }
             }
@@ -207,12 +228,13 @@ pipeline {
                 script {
                     echo "📄 Generating comprehensive report..."
                     
-                    sh """
-                        python3 scripts/generate_report.py \
-                            --review-file review-report.json \
-                            --quality-gate-file quality-gate-result.json \
-                            --commit ${env.GIT_COMMIT_SHORT} \
-                            --author "${env.GIT_AUTHOR}" \
+                    bat """
+                        @echo off
+                        python scripts\\generate_report.py ^
+                            --review-file review-report.json ^
+                            --quality-gate-file quality-gate-result.json ^
+                            --commit %GIT_COMMIT_SHORT% ^
+                            --author "%GIT_AUTHOR%" ^
                             --output-file pipeline-report.html
                     """
                     
@@ -267,7 +289,7 @@ pipeline {
             script {
                 echo "🧹 Cleaning up..."
                 // Archive all artifacts
-                archiveArtifacts artifacts: '*.json,*.html', allowEmptyArchive: true
+                archiveArtifacts artifacts: '*.json,*.html,*.txt', allowEmptyArchive: true
                 
                 // Clean workspace if needed
                 // cleanWs()
