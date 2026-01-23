@@ -240,70 +240,190 @@ Respond in JSON format:
             raise
     
     def _parse_watsonx_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
-        """Parse watsonx.ai response"""
+        """Parse watsonx.ai response with improved error handling"""
         try:
             generated_text = response['results'][0]['generated_text']
-            # Extract JSON from response
+            
+            # Try to find and extract JSON from response
             json_start = generated_text.find('{')
-            json_end = generated_text.rfind('}') + 1
+            if json_start == -1:
+                raise ValueError("No JSON object found in response")
+            
+            # Find the matching closing brace
+            brace_count = 0
+            json_end = json_start
+            for i in range(json_start, len(generated_text)):
+                if generated_text[i] == '{':
+                    brace_count += 1
+                elif generated_text[i] == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        json_end = i + 1
+                        break
+            
             json_str = generated_text[json_start:json_end]
-            return json.loads(json_str)
+            parsed_data = json.loads(json_str)
+            
+            # Validate required fields
+            if 'scores' not in parsed_data:
+                raise ValueError("Missing 'scores' field in response")
+            
+            return parsed_data
+            
         except Exception as e:
             print(f"Error parsing watsonx response: {e}")
+            print(f"Response preview: {str(response)[:500]}")
             raise
     
     def _generate_mock_review(self, files: List[Dict[str, Any]], review_depth: str) -> Dict[str, Any]:
-        """Generate mock review data for demonstration/testing"""
+        """Generate detailed code analysis when watsonx.ai is unavailable"""
         
-        # Calculate scores based on review depth and file analysis
-        base_score = 75
-        depth_modifier = {"QUICK": 5, "STANDARD": 0, "COMPREHENSIVE": -5}
-        modifier = depth_modifier.get(review_depth, 0)
+        print("⚠️ Using fallback code analysis (watsonx.ai unavailable)")
         
         issues = []
+        total_lines = 0
+        total_complexity = 0
         
-        # Analyze files for common issues
+        # Analyze files for code quality issues
         for file_info in files:
             content = file_info.get('content', '')
             path = file_info['path']
+            lines = content.split('\n')
+            total_lines += len(lines)
             
-            # Check for common issues
-            if 'TODO' in content or 'FIXME' in content:
+            # Check for poor code quality patterns
+            
+            # 1. TODO/FIXME comments
+            if 'TODO' in content or 'FIXME' in content or 'HACK' in content:
                 issues.append({
                     "severity": "MEDIUM",
                     "file": path,
                     "line": 0,
-                    "message": "Found TODO/FIXME comments",
+                    "message": "Found TODO/FIXME/HACK comments indicating incomplete code",
                     "recommendation": "Address pending tasks before merging"
                 })
             
-            if 'password' in content.lower() or 'secret' in content.lower():
-                issues.append({
-                    "severity": "CRITICAL",
-                    "file": path,
-                    "line": 0,
-                    "message": "Potential hardcoded credentials detected",
-                    "recommendation": "Use environment variables or secure vault"
-                })
-            
-            if file_info['extension'] in ['.py', '.js', '.java']:
-                if len(content.split('\n')) > 500:
+            # 2. Hardcoded credentials (CRITICAL)
+            if any(word in content.lower() for word in ['password', 'secret', 'api_key', 'apikey', 'token']):
+                if '=' in content and not 'credentials(' in content:
                     issues.append({
-                        "severity": "LOW",
+                        "severity": "CRITICAL",
                         "file": path,
                         "line": 0,
-                        "message": "Large file detected (>500 lines)",
-                        "recommendation": "Consider breaking into smaller modules"
+                        "message": "Potential hardcoded credentials or secrets detected",
+                        "recommendation": "Use environment variables or secure credential management"
+                    })
+            
+            # 3. Large files (poor maintainability)
+            if len(lines) > 500:
+                issues.append({
+                    "severity": "HIGH",
+                    "file": path,
+                    "line": 0,
+                    "message": f"Large file detected ({len(lines)} lines) - difficult to maintain",
+                    "recommendation": "Break into smaller, focused modules"
+                })
+            elif len(lines) > 300:
+                issues.append({
+                    "severity": "MEDIUM",
+                    "file": path,
+                    "line": 0,
+                    "message": f"File is getting large ({len(lines)} lines)",
+                    "recommendation": "Consider refactoring into smaller components"
+                })
+            
+            # 4. Long functions (complexity)
+            if file_info['extension'] in ['.py', '.js', '.java', '.ts']:
+                for i, line in enumerate(lines):
+                    # Detect function definitions
+                    if any(keyword in line for keyword in ['def ', 'function ', 'public ', 'private ', 'protected ']):
+                        # Count lines until next function or end
+                        func_lines = 0
+                        for j in range(i+1, min(i+100, len(lines))):
+                            if any(keyword in lines[j] for keyword in ['def ', 'function ', 'public ', 'private ']):
+                                break
+                            func_lines += 1
+                        
+                        if func_lines > 50:
+                            issues.append({
+                                "severity": "HIGH",
+                                "file": path,
+                                "line": i+1,
+                                "message": f"Function is too long ({func_lines} lines) - high complexity",
+                                "recommendation": "Break down into smaller, single-purpose functions"
+                            })
+                            total_complexity += 20
+                        elif func_lines > 30:
+                            issues.append({
+                                "severity": "MEDIUM",
+                                "file": path,
+                                "line": i+1,
+                                "message": f"Function is getting long ({func_lines} lines)",
+                                "recommendation": "Consider refactoring for better readability"
+                            })
+                            total_complexity += 10
+            
+            # 5. Missing documentation
+            if file_info['extension'] in ['.py', '.js', '.java', '.ts']:
+                has_docstring = '"""' in content or "'''" in content or '/**' in content or '//' in content
+                if not has_docstring and len(lines) > 50:
+                    issues.append({
+                        "severity": "MEDIUM",
+                        "file": path,
+                        "line": 0,
+                        "message": "Missing documentation/comments in significant code file",
+                        "recommendation": "Add docstrings and comments to explain complex logic"
+                    })
+            
+            # 6. Code duplication indicators
+            duplicate_lines = []
+            for i, line in enumerate(lines):
+                if line.strip() and len(line.strip()) > 20:
+                    count = lines.count(line)
+                    if count > 3 and line not in duplicate_lines:
+                        duplicate_lines.append(line)
+            
+            if len(duplicate_lines) > 5:
+                issues.append({
+                    "severity": "HIGH",
+                    "file": path,
+                    "line": 0,
+                    "message": f"Significant code duplication detected ({len(duplicate_lines)} repeated patterns)",
+                    "recommendation": "Extract common code into reusable functions"
+                })
+            
+            # 7. Poor naming (single letter variables in non-loop context)
+            if file_info['extension'] in ['.py', '.js', '.java', '.ts']:
+                poor_names = 0
+                for line in lines:
+                    if '=' in line and 'for ' not in line:
+                        # Check for single letter variable names
+                        import re
+                        matches = re.findall(r'\b([a-z])\s*=', line)
+                        poor_names += len([m for m in matches if m not in ['i', 'j', 'k', 'x', 'y', 'z']])
+                
+                if poor_names > 5:
+                    issues.append({
+                        "severity": "MEDIUM",
+                        "file": path,
+                        "line": 0,
+                        "message": f"Poor variable naming detected ({poor_names} single-letter names)",
+                        "recommendation": "Use descriptive variable names for better code readability"
                     })
         
-        # Calculate scores
+        # Calculate scores based on issues found
         critical_count = sum(1 for i in issues if i['severity'] == 'CRITICAL')
         high_count = sum(1 for i in issues if i['severity'] == 'HIGH')
+        medium_count = sum(1 for i in issues if i['severity'] == 'MEDIUM')
+        low_count = sum(1 for i in issues if i['severity'] == 'LOW')
         
-        security_score = max(50, 100 - (critical_count * 30) - (high_count * 15))
-        code_quality_score = base_score + modifier - (len(issues) * 2)
-        maintainability_score = base_score + modifier - (len(issues) * 3)
+        # Scoring algorithm
+        security_score = max(30, 100 - (critical_count * 40) - (high_count * 20))
+        code_quality_score = max(30, 100 - (critical_count * 30) - (high_count * 15) - (medium_count * 8) - (low_count * 3))
+        maintainability_score = max(30, 100 - (high_count * 20) - (medium_count * 10) - (total_complexity // 10))
         overall_score = (security_score + code_quality_score + maintainability_score) // 3
+        
+        quality_level = 'excellent' if overall_score >= 85 else 'good' if overall_score >= 70 else 'fair' if overall_score >= 50 else 'poor'
         
         return {
             "scores": {
@@ -313,14 +433,17 @@ Respond in JSON format:
                 "overall": max(0, min(100, overall_score))
             },
             "issues": issues,
-            "summary": f"Code review completed with {len(issues)} issues found. "
-                      f"Overall quality is {'excellent' if overall_score >= 85 else 'good' if overall_score >= 70 else 'needs improvement'}.",
+            "summary": f"Code review completed with {len(issues)} issues found ({critical_count} critical, {high_count} high, {medium_count} medium, {low_count} low). "
+                      f"Overall quality is {quality_level}.",
             "recommendations": [
-                "Follow consistent coding standards",
-                "Add comprehensive unit tests",
-                "Document complex logic with comments",
-                "Use meaningful variable and function names",
-                "Keep functions small and focused"
+                "Follow consistent coding standards and style guides",
+                "Add comprehensive unit tests for all functions",
+                "Document complex logic with clear comments",
+                "Use meaningful, descriptive variable and function names",
+                "Keep functions small and focused (< 30 lines)",
+                "Avoid code duplication - extract common patterns",
+                "Never hardcode credentials or secrets",
+                "Break large files into smaller, cohesive modules"
             ]
         }
     
