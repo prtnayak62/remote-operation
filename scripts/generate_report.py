@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Pipeline Report Generator
-Creates comprehensive HTML reports from review and quality gate results
+Pipeline Report Generator with Charts
+Creates comprehensive HTML reports with visual graphs from review and quality gate results
 """
 
 import argparse
@@ -20,7 +20,7 @@ if sys.platform == 'win32':
 
 
 class ReportGenerator:
-    """Generates HTML reports from pipeline results"""
+    """Generates HTML reports with charts from pipeline results"""
     
     def __init__(self):
         self.template = """
@@ -30,6 +30,7 @@ class ReportGenerator:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pipeline Report - {commit}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {{
             margin: 0;
@@ -46,7 +47,7 @@ class ReportGenerator:
         }}
         
         .container {{
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 8px;
@@ -113,6 +114,26 @@ class ReportGenerator:
             color: #333;
         }}
         
+        .chart-container {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }}
+        
+        .chart-box {{
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+        
+        .chart-box h3 {{
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 15px;
+        }}
+        
         .score-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -155,10 +176,10 @@ class ReportGenerator:
         
         .status-badge {{
             display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 12px 24px;
+            border-radius: 25px;
             font-weight: bold;
-            font-size: 1.1em;
+            font-size: 1.3em;
             margin: 10px 0;
         }}
         
@@ -275,6 +296,43 @@ class ReportGenerator:
             font-weight: bold;
             transition: width 0.3s ease;
         }}
+        
+        .metrics-comparison {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }}
+        
+        .metric-row {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+        }}
+        
+        .metric-name {{
+            font-weight: bold;
+            color: #667eea;
+        }}
+        
+        .metric-values {{
+            display: flex;
+            gap: 20px;
+        }}
+        
+        .metric-score {{
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }}
+        
+        .metric-threshold {{
+            color: #666;
+        }}
     </style>
 </head>
 <body>
@@ -308,11 +366,25 @@ class ReportGenerator:
                 </div>
             </div>
             
-            <!-- Quality Scores -->
+            <!-- Quality Scores with Charts -->
             <div class="section">
                 <h2 class="section-title">📊 Quality Scores</h2>
+                
+                <!-- Score Cards -->
                 <div class="score-grid">
-                    {score_cards}
+{score_cards}
+                </div>
+                
+                <!-- Charts -->
+                <div class="chart-container">
+                    <div class="chart-box">
+                        <h3>Score Distribution</h3>
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <h3>Quality vs Thresholds</h3>
+                        <canvas id="thresholdChart"></canvas>
+                    </div>
                 </div>
             </div>
             
@@ -323,13 +395,18 @@ class ReportGenerator:
                     <div class="status-badge status-{gate_status_class}">{gate_status_icon} {gate_status}</div>
                     <p style="margin: 20px 0; font-size: 1.1em;">{gate_message}</p>
                 </div>
-                {gate_details}
+                
+                <!-- Metrics Comparison -->
+                <div class="metrics-comparison">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">Detailed Metrics</h3>
+{gate_details}
+                </div>
             </div>
             
             <!-- Issues Found -->
             <div class="section">
                 <h2 class="section-title">🔍 Issues Found</h2>
-                {issues_content}
+{issues_content}
             </div>
             
             <!-- Recommendations -->
@@ -337,7 +414,7 @@ class ReportGenerator:
                 <h2 class="section-title">💡 Recommendations</h2>
                 <div class="recommendations">
                     <ul>
-                        {recommendations}
+{recommendations}
                     </ul>
                 </div>
             </div>
@@ -353,12 +430,118 @@ class ReportGenerator:
             Generated by watsonx.ai Pipeline Integration | {generation_time}
         </div>
     </div>
+    
+    <script>
+        // Score Distribution Chart
+        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+        new Chart(scoreCtx, {{
+            type: 'bar',
+            data: {{
+                labels: {chart_labels},
+                datasets: [{{
+                    label: 'Score',
+                    data: {chart_scores},
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(118, 75, 162, 0.8)',
+                        'rgba(23, 162, 184, 0.8)',
+                        'rgba(40, 167, 69, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(102, 126, 234, 1)',
+                        'rgba(118, 75, 162, 1)',
+                        'rgba(23, 162, 184, 1)',
+                        'rgba(40, 167, 69, 1)'
+                    ],
+                    borderWidth: 2
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {{
+                    y: {{
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {{
+                            callback: function(value) {{
+                                return value + '/100';
+                            }}
+                        }}
+                    }}
+                }},
+                plugins: {{
+                    legend: {{
+                        display: false
+                    }},
+                    tooltip: {{
+                        callbacks: {{
+                            label: function(context) {{
+                                return context.parsed.y + '/100';
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+        }});
+        
+        // Threshold Comparison Chart
+        const thresholdCtx = document.getElementById('thresholdChart').getContext('2d');
+        new Chart(thresholdCtx, {{
+            type: 'radar',
+            data: {{
+                labels: {threshold_labels},
+                datasets: [
+                    {{
+                        label: 'Actual Score',
+                        data: {threshold_scores},
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(102, 126, 234, 1)'
+                    }},
+                    {{
+                        label: 'Threshold',
+                        data: {threshold_values},
+                        backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(220, 53, 69, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(220, 53, 69, 1)'
+                    }}
+                ]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {{
+                    r: {{
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {{
+                            stepSize: 20
+                        }}
+                    }}
+                }},
+                plugins: {{
+                    legend: {{
+                        position: 'top'
+                    }}
+                }}
+            }}
+        }});
+    </script>
 </body>
 </html>
 """
     
     def get_score_class(self, score: int) -> str:
-        """Get CSS class based on score"""
+        """Determine CSS class based on score"""
         if score >= 85:
             return "score-excellent"
         elif score >= 70:
@@ -409,15 +592,38 @@ class ReportGenerator:
     
     def generate_report(self, review_data: Dict[str, Any], gate_data: Dict[str, Any], 
                        commit: str, author: str, output_file: str):
-        """Generate comprehensive HTML report"""
+        """Generate comprehensive HTML report with charts"""
         
-        # Generate score cards
+        # Generate score cards - USE ACTUAL DATA FROM review_data
         scores = review_data.get('scores', {})
         score_cards = ""
         score_cards += self.generate_score_card("Code Quality", scores.get('code_quality', 0))
         score_cards += self.generate_score_card("Security", scores.get('security', 0))
         score_cards += self.generate_score_card("Maintainability", scores.get('maintainability', 0))
         score_cards += self.generate_score_card("Overall", scores.get('overall', 0))
+        
+        # Prepare chart data
+        chart_labels = json.dumps(['Code Quality', 'Security', 'Maintainability', 'Overall'])
+        chart_scores = json.dumps([
+            scores.get('code_quality', 0),
+            scores.get('security', 0),
+            scores.get('maintainability', 0),
+            scores.get('overall', 0)
+        ])
+        
+        # Threshold comparison data
+        thresholds = gate_data.get('thresholds', {})
+        threshold_labels = json.dumps(['Code Quality', 'Security', 'Maintainability'])
+        threshold_scores = json.dumps([
+            scores.get('code_quality', 0),
+            scores.get('security', 0),
+            scores.get('maintainability', 0)
+        ])
+        threshold_values = json.dumps([
+            thresholds.get('code_quality', 70),
+            thresholds.get('security', 80),
+            thresholds.get('maintainability', 60)
+        ])
         
         # Generate issues list
         issues = review_data.get('issues', [])
@@ -434,9 +640,9 @@ class ReportGenerator:
         
         # Generate recommendations
         recommendations_list = review_data.get('recommendations', [])
-        recommendations = "\n".join([f"<li>{rec}</li>" for rec in recommendations_list])
+        recommendations = "\n".join([f"                        <li>{rec}</li>" for rec in recommendations_list])
         
-        # Quality gate details
+        # Quality gate details - USE ACTUAL DATA FROM gate_data
         gate_status = gate_data.get('status', 'UNKNOWN')
         gate_status_class = gate_status.lower()
         gate_status_icons = {
@@ -446,27 +652,48 @@ class ReportGenerator:
         }
         gate_status_icon = gate_status_icons.get(gate_status, '❓')
         
+        # Generate detailed metrics comparison
         gate_details = ""
         if gate_data.get('details'):
-            gate_details = '<div style="margin-top: 30px;">'
             for metric, detail in gate_data['details'].items():
                 metric_name = metric.replace('_', ' ').title()
-                status_icon = gate_status_icons.get(detail['status'], '❓')
+                status = detail.get('status', 'UNKNOWN')
+                score = detail.get('score', 0)
+                threshold = detail.get('threshold', 0)
+                
+                # Determine status icon and color
+                if status == 'PASSED':
+                    status_icon = '✅'
+                    score_class = 'score-excellent'
+                elif status == 'WARNING':
+                    status_icon = '⚠️'
+                    score_class = 'score-warning'
+                else:
+                    status_icon = '❌'
+                    score_class = 'score-poor'
+                
                 gate_details += f"""
-                <div class="info-card" style="margin-bottom: 15px;">
-                    <div class="label">{status_icon} {metric_name}</div>
-                    <div class="value">Score: {detail['score']}/100 | Threshold: {detail['threshold']}/100</div>
-                </div>
+                    <div class="metric-row">
+                        <div class="metric-name">{status_icon} {metric_name}</div>
+                        <div class="metric-values">
+                            <div class="metric-score {score_class}">Score: {score}/100</div>
+                            <div class="metric-threshold">Threshold: {threshold}/100</div>
+                        </div>
+                    </div>
 """
-            gate_details += '</div>'
         
-        # Fill template
+        # Fill template with ACTUAL data
         html = self.template.format(
             commit=commit,
-            author=author,
+            author=author if author and author != "ECHO is off." else "Unknown",
             timestamp=review_data.get('timestamp', 'N/A'),
             review_depth=review_data.get('review_depth', 'STANDARD'),
             score_cards=score_cards,
+            chart_labels=chart_labels,
+            chart_scores=chart_scores,
+            threshold_labels=threshold_labels,
+            threshold_scores=threshold_scores,
+            threshold_values=threshold_values,
             gate_status=gate_status,
             gate_status_class=gate_status_class,
             gate_status_icon=gate_status_icon,
@@ -483,10 +710,12 @@ class ReportGenerator:
             f.write(html)
         
         print(f"✅ Report generated: {output_file}")
+        print(f"📊 Scores: Code Quality={scores.get('code_quality', 0)}, Security={scores.get('security', 0)}, Maintainability={scores.get('maintainability', 0)}")
+        print(f"🚦 Quality Gate: {gate_status}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Pipeline Report")
+    parser = argparse.ArgumentParser(description="Generate Pipeline Report with Charts")
     parser.add_argument("--review-file", required=True, help="Review report JSON file")
     parser.add_argument("--quality-gate-file", required=True, help="Quality gate result JSON file")
     parser.add_argument("--commit", required=True, help="Git commit hash")
@@ -497,24 +726,37 @@ def main():
     
     # Load data
     try:
-        with open(args.review_file, 'r') as f:
+        with open(args.review_file, 'r', encoding='utf-8') as f:
             review_data = json.load(f)
+        print(f"✅ Loaded review data from {args.review_file}")
     except Exception as e:
-        print(f"Error loading review file: {e}")
+        print(f"❌ Error loading review file: {e}")
         return 1
     
     try:
-        with open(args.quality_gate_file, 'r') as f:
+        with open(args.quality_gate_file, 'r', encoding='utf-8') as f:
             gate_data = json.load(f)
+        print(f"✅ Loaded quality gate data from {args.quality_gate_file}")
     except Exception as e:
-        print(f"Error loading quality gate file: {e}")
+        print(f"❌ Error loading quality gate file: {e}")
         return 1
     
     # Generate report
     generator = ReportGenerator()
-    generator.generate_report(review_data, gate_data, args.commit, args.author, args.output_file)
-    
-    return 0
+    try:
+        generator.generate_report(
+            review_data=review_data,
+            gate_data=gate_data,
+            commit=args.commit,
+            author=args.author,
+            output_file=args.output_file
+        )
+        return 0
+    except Exception as e:
+        print(f"❌ Error generating report: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
 
 
 if __name__ == "__main__":

@@ -159,21 +159,22 @@ pipeline {
  */
 def extractGitMetadata() {
     try {
+        // Use direct git commands with output redirection
         bat '''
             @echo off
-            for /f "tokens=*" %%i in ('git rev-parse --short HEAD') do set GIT_COMMIT_SHORT=%%i
-            echo %GIT_COMMIT_SHORT% > commit_short.txt
-            
-            for /f "tokens=*" %%i in ('git log -1 --pretty=%%B') do set GIT_COMMIT_MSG=%%i
-            echo %GIT_COMMIT_MSG% > commit_msg.txt
-            
-            for /f "tokens=*" %%i in ('git log -1 --pretty=%%an') do set GIT_AUTHOR=%%i
-            echo %GIT_AUTHOR% > commit_author.txt
+            git rev-parse --short HEAD > commit_short.txt
+            git log -1 --pretty=%%B > commit_msg.txt
+            git log -1 --pretty=%%an > commit_author.txt
         '''
         
         env.GIT_COMMIT_SHORT = readFile('commit_short.txt').trim()
         env.GIT_COMMIT_MSG = readFile('commit_msg.txt').trim()
         env.GIT_AUTHOR = readFile('commit_author.txt').trim()
+        
+        // Fallback if author is empty
+        if (!env.GIT_AUTHOR || env.GIT_AUTHOR.isEmpty() || env.GIT_AUTHOR == "ECHO is off.") {
+            env.GIT_AUTHOR = "Unknown Author"
+        }
         
         echo "✓ Commit: ${env.GIT_COMMIT_SHORT}"
         echo "✓ Author: ${env.GIT_AUTHOR}"
@@ -181,7 +182,8 @@ def extractGitMetadata() {
     } catch (Exception e) {
         echo "⚠️ Warning: Could not extract full Git metadata: ${e.message}"
         env.GIT_COMMIT_SHORT = "unknown"
-        env.GIT_AUTHOR = "unknown"
+        env.GIT_AUTHOR = "Unknown Author"
+        env.GIT_COMMIT_MSG = "No commit message"
     }
 }
 
