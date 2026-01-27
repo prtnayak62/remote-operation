@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Pipeline Report Generator with Pure CSS/SVG Charts
-Creates comprehensive HTML reports with visual graphs that work in Jenkins
+Pipeline Report Generator - Jenkins Compatible
+Creates HTML reports with simple visual elements that work in Jenkins
 """
 
 import argparse
@@ -20,7 +20,7 @@ if sys.platform == 'win32':
 
 
 class ReportGenerator:
-    """Generates HTML reports with CSS/SVG charts from pipeline results"""
+    """Generates HTML reports with simple charts from pipeline results"""
     
     def __init__(self):
         self.template = """
@@ -31,27 +31,21 @@ class ReportGenerator:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pipeline Report - {commit}</title>
     <style>
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
-        
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
             background: #f5f5f5;
             padding: 20px;
+            margin: 0;
         }}
         
         .container {{
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
         }}
         
         .header {{
@@ -59,16 +53,12 @@ class ReportGenerator:
             color: white;
             padding: 30px;
             text-align: center;
+            border-radius: 8px 8px 0 0;
         }}
         
         .header h1 {{
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }}
-        
-        .header .subtitle {{
-            font-size: 1.1em;
-            opacity: 0.9;
+            font-size: 2em;
+            margin: 0 0 10px 0;
         }}
         
         .content {{
@@ -80,7 +70,7 @@ class ReportGenerator:
         }}
         
         .section-title {{
-            font-size: 1.8em;
+            font-size: 1.5em;
             color: #667eea;
             margin-bottom: 20px;
             padding-bottom: 10px;
@@ -88,242 +78,159 @@ class ReportGenerator:
         }}
         
         .info-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
         }}
         
-        .info-card {{
+        .info-row {{
+            display: table-row;
+        }}
+        
+        .info-cell {{
+            display: table-cell;
+            padding: 15px;
             background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border: 1px solid #dee2e6;
+            vertical-align: top;
         }}
         
-        .info-card .label {{
-            font-size: 0.9em;
+        .info-label {{
+            font-weight: bold;
             color: #666;
             margin-bottom: 5px;
         }}
         
-        .info-card .value {{
-            font-size: 1.2em;
-            font-weight: bold;
+        .info-value {{
+            font-size: 1.1em;
             color: #333;
         }}
         
-        .score-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+        .score-table {{
+            width: 100%;
+            border-collapse: collapse;
             margin-bottom: 30px;
         }}
         
-        .score-card {{
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-top: 4px solid #667eea;
-        }}
-        
-        .score-card .score-label {{
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }}
-        
-        .score-card .score-value {{
-            font-size: 3em;
+        .score-table th {{
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
             font-weight: bold;
-            margin-bottom: 5px;
         }}
         
-        .score-card .score-max {{
-            font-size: 1.2em;
-            color: #999;
+        .score-table td {{
+            padding: 15px;
+            border: 1px solid #dee2e6;
         }}
         
-        .score-excellent {{ color: #28a745; border-top-color: #28a745; }}
-        .score-good {{ color: #17a2b8; border-top-color: #17a2b8; }}
-        .score-warning {{ color: #ffc107; border-top-color: #ffc107; }}
-        .score-poor {{ color: #dc3545; border-top-color: #dc3545; }}
+        .score-table tr:nth-child(even) {{
+            background: #f8f9fa;
+        }}
         
-        .chart-container {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 30px;
-            margin-bottom: 30px;
+        .score-bar {{
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }}
+        
+        .score-bar-fill {{
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }}
+        
+        .score-excellent {{ background: linear-gradient(90deg, #28a745 0%, #20c997 100%) !important; }}
+        .score-good {{ background: linear-gradient(90deg, #17a2b8 0%, #20c997 100%) !important; }}
+        .score-warning {{ background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%) !important; }}
+        .score-poor {{ background: linear-gradient(90deg, #dc3545 0%, #c82333 100%) !important; }}
+        
+        .chart-grid {{
+            display: table;
+            width: 100%;
+            margin: 20px 0;
+        }}
+        
+        .chart-cell {{
+            display: table-cell;
+            width: 50%;
+            padding: 20px;
+            vertical-align: top;
         }}
         
         .chart-box {{
-            background: white;
+            background: #f8f9fa;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 2px solid #dee2e6;
         }}
         
-        .chart-box h3 {{
+        .chart-title {{
             text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
             color: #667eea;
             margin-bottom: 20px;
         }}
         
-        /* CSS Bar Chart */
-        .bar-chart {{
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-end;
-            height: 300px;
-            padding: 20px;
-            border-bottom: 2px solid #ddd;
-            position: relative;
-        }}
-        
-        .bar-chart::before {{
-            content: '100';
-            position: absolute;
-            left: 0;
-            top: 0;
-            font-size: 0.8em;
-            color: #999;
-        }}
-        
-        .bar-chart::after {{
-            content: '0';
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            font-size: 0.8em;
-            color: #999;
-        }}
-        
-        .bar {{
-            flex: 1;
-            margin: 0 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-        }}
-        
-        .bar-fill {{
+        .bar-chart-simple {{
+            display: table;
             width: 100%;
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-            border-radius: 4px 4px 0 0;
-            transition: all 0.3s ease;
-            position: relative;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding-top: 10px;
+            border-collapse: collapse;
         }}
         
-        .bar-fill:hover {{
-            opacity: 0.8;
+        .bar-row {{
+            display: table-row;
         }}
         
-        .bar-value {{
-            color: white;
+        .bar-label-cell {{
+            display: table-cell;
+            padding: 10px;
             font-weight: bold;
-            font-size: 1.2em;
+            width: 30%;
+            vertical-align: middle;
         }}
         
-        .bar-label {{
-            margin-top: 10px;
-            font-size: 0.85em;
-            color: #666;
-            text-align: center;
-            word-wrap: break-word;
+        .bar-cell {{
+            display: table-cell;
+            padding: 10px;
+            width: 70%;
+            vertical-align: middle;
         }}
         
-        /* SVG Radar Chart */
-        .radar-chart {{
+        .comparison-table {{
             width: 100%;
-            height: 300px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            border-collapse: collapse;
+            margin-top: 20px;
         }}
         
-        .radar-chart svg {{
-            max-width: 100%;
-            max-height: 100%;
-        }}
-        
-        .radar-grid {{
-            fill: none;
-            stroke: #ddd;
-            stroke-width: 1;
-        }}
-        
-        .radar-axis {{
-            stroke: #999;
-            stroke-width: 1;
-        }}
-        
-        .radar-label {{
-            font-size: 12px;
-            fill: #666;
-        }}
-        
-        .radar-area-actual {{
-            fill: rgba(102, 126, 234, 0.3);
-            stroke: #667eea;
-            stroke-width: 2;
-        }}
-        
-        .radar-area-threshold {{
-            fill: rgba(220, 53, 69, 0.2);
-            stroke: #dc3545;
-            stroke-width: 2;
-            stroke-dasharray: 5,5;
-        }}
-        
-        .radar-point {{
-            fill: #667eea;
-            stroke: white;
-            stroke-width: 2;
-        }}
-        
-        .radar-legend {{
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 15px;
-            font-size: 0.9em;
-        }}
-        
-        .legend-item {{
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }}
-        
-        .legend-color {{
-            width: 20px;
-            height: 12px;
-            border-radius: 2px;
-        }}
-        
-        .legend-actual {{
+        .comparison-table th {{
             background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
         }}
         
-        .legend-threshold {{
-            background: #dc3545;
+        .comparison-table td {{
+            padding: 12px;
+            border: 1px solid #dee2e6;
         }}
         
         .status-badge {{
             display: inline-block;
-            padding: 12px 24px;
-            border-radius: 25px;
+            padding: 10px 20px;
+            border-radius: 20px;
             font-weight: bold;
-            font-size: 1.3em;
+            font-size: 1.2em;
             margin: 10px 0;
         }}
         
@@ -345,8 +252,9 @@ class ReportGenerator:
             border: 2px solid #dc3545;
         }}
         
-        .issues-list {{
+        .issue-list {{
             list-style: none;
+            padding: 0;
         }}
         
         .issue-item {{
@@ -355,7 +263,6 @@ class ReportGenerator:
             margin-bottom: 10px;
             border-radius: 6px;
             border-left: 4px solid #ccc;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }}
         
         .issue-critical {{ border-left-color: #dc3545; }}
@@ -377,26 +284,6 @@ class ReportGenerator:
         .severity-medium {{ background: #ffc107; color: #333; }}
         .severity-low {{ background: #17a2b8; color: white; }}
         
-        .issue-file {{
-            color: #667eea;
-            font-family: monospace;
-            font-size: 0.9em;
-        }}
-        
-        .issue-message {{
-            margin: 10px 0;
-            color: #333;
-        }}
-        
-        .issue-recommendation {{
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            font-size: 0.9em;
-            color: #666;
-        }}
-        
         .recommendations {{
             background: #e7f3ff;
             padding: 20px;
@@ -404,86 +291,20 @@ class ReportGenerator:
             border-left: 4px solid #667eea;
         }}
         
-        .recommendations ul {{
-            margin-left: 20px;
-        }}
-        
-        .recommendations li {{
-            margin: 10px 0;
-            color: #333;
-        }}
-        
         .footer {{
             background: #f8f9fa;
             padding: 20px;
             text-align: center;
             color: #666;
-            font-size: 0.9em;
-        }}
-        
-        .progress-bar {{
-            width: 100%;
-            height: 30px;
-            background: #e9ecef;
-            border-radius: 15px;
-            overflow: hidden;
-            margin: 10px 0;
-        }}
-        
-        .progress-fill {{
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            transition: width 0.3s ease;
-        }}
-        
-        .metrics-comparison {{
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }}
-        
-        .metric-row {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            margin: 5px 0;
-            background: white;
-            border-radius: 4px;
-        }}
-        
-        .metric-name {{
-            font-weight: bold;
-            color: #667eea;
-        }}
-        
-        .metric-values {{
-            display: flex;
-            gap: 20px;
-        }}
-        
-        .metric-score {{
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-weight: bold;
-        }}
-        
-        .metric-threshold {{
-            color: #666;
+            border-radius: 0 0 8px 8px;
         }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 Pipeline Report</h1>
-            <div class="subtitle">watsonx.ai Code Review & Quality Gate Analysis</div>
+            <h1>Pipeline Report</h1>
+            <div>watsonx.ai Code Review & Quality Gate Analysis</div>
         </div>
         
         <div class="content">
@@ -491,56 +312,64 @@ class ReportGenerator:
             <div class="section">
                 <h2 class="section-title">Build Information</h2>
                 <div class="info-grid">
-                    <div class="info-card">
-                        <div class="label">Commit</div>
-                        <div class="value">{commit}</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">Author</div>
-                        <div class="value">{author}</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">Timestamp</div>
-                        <div class="value">{timestamp}</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">Review Depth</div>
-                        <div class="value">{review_depth}</div>
+                    <div class="info-row">
+                        <div class="info-cell">
+                            <div class="info-label">Commit</div>
+                            <div class="info-value">{commit}</div>
+                        </div>
+                        <div class="info-cell">
+                            <div class="info-label">Author</div>
+                            <div class="info-value">{author}</div>
+                        </div>
+                        <div class="info-cell">
+                            <div class="info-label">Timestamp</div>
+                            <div class="info-value">{timestamp}</div>
+                        </div>
+                        <div class="info-cell">
+                            <div class="info-label">Review Depth</div>
+                            <div class="info-value">{review_depth}</div>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Quality Scores with Charts -->
+            <!-- Quality Scores -->
             <div class="section">
                 <h2 class="section-title">Quality Scores</h2>
-                
-                <!-- Score Cards -->
-                <div class="score-grid">
-{score_cards}
-                </div>
-                
-                <!-- Charts -->
-                <div class="chart-container">
-                    <div class="chart-box">
-                        <h3>Score Distribution</h3>
-                        <div class="bar-chart">
+                <table class="score-table">
+                    <tr>
+                        <th>Metric</th>
+                        <th>Score</th>
+                        <th>Visual</th>
+                    </tr>
+{score_rows}
+                </table>
+            </div>
+            
+            <!-- Charts -->
+            <div class="section">
+                <h2 class="section-title">Score Visualization</h2>
+                <div class="chart-grid">
+                    <div class="chart-cell">
+                        <div class="chart-box">
+                            <div class="chart-title">Score Distribution</div>
+                            <div class="bar-chart-simple">
 {bar_chart}
+                            </div>
                         </div>
                     </div>
-                    <div class="chart-box">
-                        <h3>Quality vs Thresholds</h3>
-                        <div class="radar-chart">
-{radar_chart}
-                        </div>
-                        <div class="radar-legend">
-                            <div class="legend-item">
-                                <div class="legend-color legend-actual"></div>
-                                <span>Actual Score</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color legend-threshold"></div>
-                                <span>Threshold</span>
-                            </div>
+                    <div class="chart-cell">
+                        <div class="chart-box">
+                            <div class="chart-title">Quality vs Thresholds</div>
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Score</th>
+                                    <th>Threshold</th>
+                                    <th>Status</th>
+                                </tr>
+{comparison_rows}
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -552,12 +381,6 @@ class ReportGenerator:
                 <div style="text-align: center;">
                     <div class="status-badge status-{gate_status_class}">{gate_status_icon} {gate_status}</div>
                     <p style="margin: 20px 0; font-size: 1.1em;">{gate_message}</p>
-                </div>
-                
-                <!-- Metrics Comparison -->
-                <div class="metrics-comparison">
-                    <h3 style="margin-bottom: 15px; color: #667eea;">Detailed Metrics</h3>
-{gate_details}
                 </div>
             </div>
             
@@ -603,128 +426,93 @@ class ReportGenerator:
         else:
             return "score-poor"
     
-    def generate_score_card(self, label: str, score: int) -> str:
-        """Generate HTML for a score card"""
-        score_class = self.get_score_class(score)
-        return f"""
-                    <div class="score-card">
-                        <div class="score-label">{label}</div>
-                        <div class="score-value {score_class}">{score}</div>
-                        <div class="score-max">/100</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: {score}%">{score}%</div>
-                        </div>
-                    </div>
+    def generate_score_rows(self, scores: Dict[str, int]) -> str:
+        """Generate table rows for scores"""
+        metrics = [
+            ('Code Quality', scores.get('code_quality', 0)),
+            ('Security', scores.get('security', 0)),
+            ('Maintainability', scores.get('maintainability', 0)),
+            ('Overall', scores.get('overall', 0))
+        ]
+        
+        rows = ""
+        for label, score in metrics:
+            score_class = self.get_score_class(score)
+            rows += f"""
+                    <tr>
+                        <td><strong>{label}</strong></td>
+                        <td><strong>{score}/100</strong></td>
+                        <td>
+                            <div class="score-bar">
+                                <div class="score-bar-fill {score_class}" style="width: {score}%;">
+                                    {score}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
 """
+        return rows
     
     def generate_bar_chart(self, scores: Dict[str, int]) -> str:
-        """Generate CSS bar chart"""
-        labels = ['Code Quality', 'Security', 'Maintainability', 'Overall']
-        values = [
-            scores.get('code_quality', 0),
-            scores.get('security', 0),
-            scores.get('maintainability', 0),
-            scores.get('overall', 0)
+        """Generate simple bar chart using table"""
+        metrics = [
+            ('Code Quality', scores.get('code_quality', 0)),
+            ('Security', scores.get('security', 0)),
+            ('Maintainability', scores.get('maintainability', 0)),
+            ('Overall', scores.get('overall', 0))
         ]
         
         bars = ""
-        for label, value in zip(labels, values):
-            height_percent = value * 3  # Scale to 300px max height
+        for label, score in metrics:
+            score_class = self.get_score_class(score)
             bars += f"""
-                            <div class="bar">
-                                <div class="bar-fill" style="height: {height_percent}px;">
-                                    <span class="bar-value">{value}</span>
+                                <div class="bar-row">
+                                    <div class="bar-label-cell">{label}</div>
+                                    <div class="bar-cell">
+                                        <div class="score-bar">
+                                            <div class="score-bar-fill {score_class}" style="width: {score}%;">
+                                                {score}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="bar-label">{label}</div>
-                            </div>
 """
         return bars
     
-    def generate_radar_chart(self, scores: Dict[str, int], thresholds: Dict[str, int]) -> str:
-        """Generate SVG radar chart"""
-        import math
-        
-        # Chart dimensions
-        size = 300
-        center = size / 2
-        radius = size / 2 - 40
-        
-        # Metrics
-        metrics = ['Code Quality', 'Security', 'Maintainability']
-        actual_values = [
-            scores.get('code_quality', 0),
-            scores.get('security', 0),
-            scores.get('maintainability', 0)
-        ]
-        threshold_values = [
-            thresholds.get('code_quality', 70),
-            thresholds.get('security', 80),
-            thresholds.get('maintainability', 60)
+    def generate_comparison_rows(self, scores: Dict[str, int], thresholds: Dict[str, int], details: Dict[str, Any]) -> str:
+        """Generate comparison table rows"""
+        metrics = [
+            ('Code Quality', 'code_quality'),
+            ('Security', 'security'),
+            ('Maintainability', 'maintainability')
         ]
         
-        # Calculate points
-        def get_point(value, index, num_points):
-            angle = (2 * math.pi * index / num_points) - (math.pi / 2)
-            r = (value / 100) * radius
-            x = center + r * math.cos(angle)
-            y = center + r * math.sin(angle)
-            return x, y
-        
-        # Generate grid circles
-        grid_circles = ""
-        for i in range(1, 6):
-            r = radius * i / 5
-            grid_circles += f'<circle cx="{center}" cy="{center}" r="{r}" class="radar-grid"/>\n'
-        
-        # Generate axes and labels
-        axes = ""
-        labels = ""
-        for i, metric in enumerate(metrics):
-            x, y = get_point(100, i, len(metrics))
-            axes += f'<line x1="{center}" y1="{center}" x2="{x}" y2="{y}" class="radar-axis"/>\n'
+        rows = ""
+        for label, key in metrics:
+            score = scores.get(key, 0)
+            threshold = thresholds.get(key, 0)
+            detail = details.get(key, {}) if details else {}
+            status = detail.get('status', 'UNKNOWN')
             
-            # Label position (slightly outside)
-            label_x, label_y = get_point(110, i, len(metrics))
-            # Adjust text anchor based on position
-            anchor = "middle"
-            if label_x < center - 10:
-                anchor = "end"
-            elif label_x > center + 10:
-                anchor = "start"
+            if status == 'PASSED':
+                status_icon = '✅'
+                status_color = '#28a745'
+            elif status == 'WARNING':
+                status_icon = '⚠️'
+                status_color = '#ffc107'
+            else:
+                status_icon = '❌'
+                status_color = '#dc3545'
             
-            labels += f'<text x="{label_x}" y="{label_y}" class="radar-label" text-anchor="{anchor}">{metric}</text>\n'
-        
-        # Generate actual score polygon
-        actual_points = []
-        for i, value in enumerate(actual_values):
-            x, y = get_point(value, i, len(actual_values))
-            actual_points.append(f"{x},{y}")
-        actual_polygon = f'<polygon points="{" ".join(actual_points)}" class="radar-area-actual"/>\n'
-        
-        # Generate threshold polygon
-        threshold_points = []
-        for i, value in enumerate(threshold_values):
-            x, y = get_point(value, i, len(threshold_values))
-            threshold_points.append(f"{x},{y}")
-        threshold_polygon = f'<polygon points="{" ".join(threshold_points)}" class="radar-area-threshold"/>\n'
-        
-        # Generate points
-        points_svg = ""
-        for i, value in enumerate(actual_values):
-            x, y = get_point(value, i, len(actual_values))
-            points_svg += f'<circle cx="{x}" cy="{y}" r="4" class="radar-point"/>\n'
-        
-        svg = f"""
-                            <svg width="{size}" height="{size}" viewBox="0 0 {size} {size}">
-                                {grid_circles}
-                                {axes}
-                                {threshold_polygon}
-                                {actual_polygon}
-                                {points_svg}
-                                {labels}
-                            </svg>
+            rows += f"""
+                                <tr>
+                                    <td><strong>{label}</strong></td>
+                                    <td><strong>{score}/100</strong></td>
+                                    <td>{threshold}/100</td>
+                                    <td style="color: {status_color}; font-weight: bold;">{status_icon} {status}</td>
+                                </tr>
 """
-        return svg
+        return rows
     
     def generate_issue_html(self, issue: Dict[str, Any]) -> str:
         """Generate HTML for an issue"""
@@ -736,14 +524,14 @@ class ReportGenerator:
                 <li class="issue-item {issue_class}">
                     <div>
                         <span class="issue-severity {severity_class}">{severity}</span>
-                        <span class="issue-file">{issue.get('file', 'N/A')}</span>
+                        <span style="color: #667eea; font-family: monospace;">{issue.get('file', 'N/A')}</span>
                     </div>
-                    <div class="issue-message">{issue.get('message', 'No description')}</div>
+                    <div style="margin: 10px 0;">{issue.get('message', 'No description')}</div>
 """
         
         if issue.get('recommendation'):
             html += f"""
-                    <div class="issue-recommendation">
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px;">
                         <strong>Recommendation:</strong> {issue['recommendation']}
                     </div>
 """
@@ -753,39 +541,40 @@ class ReportGenerator:
     
     def generate_report(self, review_data: Dict[str, Any], gate_data: Dict[str, Any], 
                        commit: str, author: str, output_file: str):
-        """Generate comprehensive HTML report with CSS/SVG charts"""
+        """Generate comprehensive HTML report"""
         
-        # Generate score cards - USE ACTUAL DATA FROM review_data
+        # Get scores
         scores = review_data.get('scores', {})
-        score_cards = ""
-        score_cards += self.generate_score_card("Code Quality", scores.get('code_quality', 0))
-        score_cards += self.generate_score_card("Security", scores.get('security', 0))
-        score_cards += self.generate_score_card("Maintainability", scores.get('maintainability', 0))
-        score_cards += self.generate_score_card("Overall", scores.get('overall', 0))
-        
-        # Generate charts
-        bar_chart = self.generate_bar_chart(scores)
         thresholds = gate_data.get('thresholds', {})
-        radar_chart = self.generate_radar_chart(scores, thresholds)
+        details = gate_data.get('details', {})
+        
+        # Generate score rows
+        score_rows = self.generate_score_rows(scores)
+        
+        # Generate bar chart
+        bar_chart = self.generate_bar_chart(scores)
+        
+        # Generate comparison rows
+        comparison_rows = self.generate_comparison_rows(scores, thresholds, details)
         
         # Generate issues list
         issues = review_data.get('issues', [])
         if issues:
             issues_content = f"""
                 <p style="margin-bottom: 20px;">Found <strong>{len(issues)}</strong> issues requiring attention:</p>
-                <ul class="issues-list">
+                <ul class="issue-list">
 """
             for issue in issues:
                 issues_content += self.generate_issue_html(issue)
             issues_content += "                </ul>"
         else:
-            issues_content = '<p style="text-align: center; padding: 40px; color: #28a745; font-size: 1.2em;">✅ No issues found! Excellent work!</p>'
+            issues_content = '<p style="text-align: center; padding: 40px; color: #28a745; font-size: 1.2em;">No issues found! Excellent work!</p>'
         
         # Generate recommendations
         recommendations_list = review_data.get('recommendations', [])
         recommendations = "\n".join([f"                        <li>{rec}</li>" for rec in recommendations_list])
         
-        # Quality gate details - USE ACTUAL DATA FROM gate_data
+        # Quality gate details
         gate_status = gate_data.get('status', 'UNKNOWN')
         gate_status_class = gate_status.lower()
         gate_status_icons = {
@@ -795,50 +584,19 @@ class ReportGenerator:
         }
         gate_status_icon = gate_status_icons.get(gate_status, '❓')
         
-        # Generate detailed metrics comparison
-        gate_details = ""
-        if gate_data.get('details'):
-            for metric, detail in gate_data['details'].items():
-                metric_name = metric.replace('_', ' ').title()
-                status = detail.get('status', 'UNKNOWN')
-                score = detail.get('score', 0)
-                threshold = detail.get('threshold', 0)
-                
-                # Determine status icon and color
-                if status == 'PASSED':
-                    status_icon = '✅'
-                    score_class = 'score-excellent'
-                elif status == 'WARNING':
-                    status_icon = '⚠️'
-                    score_class = 'score-warning'
-                else:
-                    status_icon = '❌'
-                    score_class = 'score-poor'
-                
-                gate_details += f"""
-                    <div class="metric-row">
-                        <div class="metric-name">{status_icon} {metric_name}</div>
-                        <div class="metric-values">
-                            <div class="metric-score {score_class}">Score: {score}/100</div>
-                            <div class="metric-threshold">Threshold: {threshold}/100</div>
-                        </div>
-                    </div>
-"""
-        
-        # Fill template with ACTUAL data
+        # Fill template
         html = self.template.format(
             commit=commit,
             author=author if author and author != "ECHO is off." else "Unknown",
             timestamp=review_data.get('timestamp', 'N/A'),
             review_depth=review_data.get('review_depth', 'STANDARD'),
-            score_cards=score_cards,
+            score_rows=score_rows,
             bar_chart=bar_chart,
-            radar_chart=radar_chart,
+            comparison_rows=comparison_rows,
             gate_status=gate_status,
             gate_status_class=gate_status_class,
             gate_status_icon=gate_status_icon,
             gate_message=gate_data.get('message', 'No message'),
-            gate_details=gate_details,
             issues_content=issues_content,
             recommendations=recommendations,
             summary=review_data.get('summary', 'No summary available'),
@@ -855,7 +613,7 @@ class ReportGenerator:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Pipeline Report with CSS/SVG Charts")
+    parser = argparse.ArgumentParser(description="Generate Pipeline Report")
     parser.add_argument("--review-file", required=True, help="Review report JSON file")
     parser.add_argument("--quality-gate-file", required=True, help="Quality gate result JSON file")
     parser.add_argument("--commit", required=True, help="Git commit hash")
