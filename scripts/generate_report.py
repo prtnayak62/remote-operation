@@ -489,7 +489,7 @@ class ReportGenerator:
         <div class="content">
             <!-- Build Information -->
             <div class="section">
-                <h2 class="section-title">📋 Build Information</h2>
+                <h2 class="section-title">Build Information</h2>
                 <div class="info-grid">
                     <div class="info-card">
                         <div class="label">Commit</div>
@@ -512,7 +512,7 @@ class ReportGenerator:
             
             <!-- Quality Scores with Charts -->
             <div class="section">
-                <h2 class="section-title">📊 Quality Scores</h2>
+                <h2 class="section-title">Quality Scores</h2>
                 
                 <!-- Score Cards -->
                 <div class="score-grid">
@@ -548,7 +548,7 @@ class ReportGenerator:
             
             <!-- Quality Gate Status -->
             <div class="section">
-                <h2 class="section-title">🚦 Quality Gate Status</h2>
+                <h2 class="section-title">Quality Gate Status</h2>
                 <div style="text-align: center;">
                     <div class="status-badge status-{gate_status_class}">{gate_status_icon} {gate_status}</div>
                     <p style="margin: 20px 0; font-size: 1.1em;">{gate_message}</p>
@@ -563,13 +563,13 @@ class ReportGenerator:
             
             <!-- Issues Found -->
             <div class="section">
-                <h2 class="section-title">🔍 Issues Found</h2>
+                <h2 class="section-title">Issues Found</h2>
 {issues_content}
             </div>
             
             <!-- Recommendations -->
             <div class="section">
-                <h2 class="section-title">💡 Recommendations</h2>
+                <h2 class="section-title">Recommendations</h2>
                 <div class="recommendations">
                     <ul>
 {recommendations}
@@ -579,7 +579,7 @@ class ReportGenerator:
             
             <!-- Summary -->
             <div class="section">
-                <h2 class="section-title">📝 Summary</h2>
+                <h2 class="section-title">Summary</h2>
                 <p style="font-size: 1.1em; line-height: 1.8;">{summary}</p>
             </div>
         </div>
@@ -744,7 +744,7 @@ class ReportGenerator:
         if issue.get('recommendation'):
             html += f"""
                     <div class="issue-recommendation">
-                        <strong>💡 Recommendation:</strong> {issue['recommendation']}
+                        <strong>Recommendation:</strong> {issue['recommendation']}
                     </div>
 """
         
