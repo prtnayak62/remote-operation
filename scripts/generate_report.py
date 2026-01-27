@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Pipeline Report Generator with Charts
-Creates comprehensive HTML reports with visual graphs from review and quality gate results
+Pipeline Report Generator with Pure CSS/SVG Charts
+Creates comprehensive HTML reports with visual graphs that work in Jenkins
 """
 
 import argparse
@@ -20,7 +20,7 @@ if sys.platform == 'win32':
 
 
 class ReportGenerator:
-    """Generates HTML reports with charts from pipeline results"""
+    """Generates HTML reports with CSS/SVG charts from pipeline results"""
     
     def __init__(self):
         self.template = """
@@ -30,7 +30,6 @@ class ReportGenerator:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pipeline Report - {commit}</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {{
             margin: 0;
@@ -114,26 +113,6 @@ class ReportGenerator:
             color: #333;
         }}
         
-        .chart-container {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 30px;
-            margin-bottom: 30px;
-        }}
-        
-        .chart-box {{
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }}
-        
-        .chart-box h3 {{
-            text-align: center;
-            color: #667eea;
-            margin-bottom: 15px;
-        }}
-        
         .score-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -173,6 +152,171 @@ class ReportGenerator:
         .score-good {{ color: #17a2b8; border-top-color: #17a2b8; }}
         .score-warning {{ color: #ffc107; border-top-color: #ffc107; }}
         .score-poor {{ color: #dc3545; border-top-color: #dc3545; }}
+        
+        .chart-container {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }}
+        
+        .chart-box {{
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+        
+        .chart-box h3 {{
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+        }}
+        
+        /* CSS Bar Chart */
+        .bar-chart {{
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 300px;
+            padding: 20px;
+            border-bottom: 2px solid #ddd;
+            position: relative;
+        }}
+        
+        .bar-chart::before {{
+            content: '100';
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-size: 0.8em;
+            color: #999;
+        }}
+        
+        .bar-chart::after {{
+            content: '0';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            font-size: 0.8em;
+            color: #999;
+        }}
+        
+        .bar {{
+            flex: 1;
+            margin: 0 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+        }}
+        
+        .bar-fill {{
+            width: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px 4px 0 0;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 10px;
+        }}
+        
+        .bar-fill:hover {{
+            opacity: 0.8;
+        }}
+        
+        .bar-value {{
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+        }}
+        
+        .bar-label {{
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #666;
+            text-align: center;
+            word-wrap: break-word;
+        }}
+        
+        /* SVG Radar Chart */
+        .radar-chart {{
+            width: 100%;
+            height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }}
+        
+        .radar-chart svg {{
+            max-width: 100%;
+            max-height: 100%;
+        }}
+        
+        .radar-grid {{
+            fill: none;
+            stroke: #ddd;
+            stroke-width: 1;
+        }}
+        
+        .radar-axis {{
+            stroke: #999;
+            stroke-width: 1;
+        }}
+        
+        .radar-label {{
+            font-size: 12px;
+            fill: #666;
+        }}
+        
+        .radar-area-actual {{
+            fill: rgba(102, 126, 234, 0.3);
+            stroke: #667eea;
+            stroke-width: 2;
+        }}
+        
+        .radar-area-threshold {{
+            fill: rgba(220, 53, 69, 0.2);
+            stroke: #dc3545;
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
+        }}
+        
+        .radar-point {{
+            fill: #667eea;
+            stroke: white;
+            stroke-width: 2;
+        }}
+        
+        .radar-legend {{
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }}
+        
+        .legend-item {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }}
+        
+        .legend-color {{
+            width: 20px;
+            height: 12px;
+            border-radius: 2px;
+        }}
+        
+        .legend-actual {{
+            background: #667eea;
+        }}
+        
+        .legend-threshold {{
+            background: #dc3545;
+        }}
         
         .status-badge {{
             display: inline-block;
@@ -379,11 +523,25 @@ class ReportGenerator:
                 <div class="chart-container">
                     <div class="chart-box">
                         <h3>Score Distribution</h3>
-                        <canvas id="scoreChart"></canvas>
+                        <div class="bar-chart">
+{bar_chart}
+                        </div>
                     </div>
                     <div class="chart-box">
                         <h3>Quality vs Thresholds</h3>
-                        <canvas id="thresholdChart"></canvas>
+                        <div class="radar-chart">
+{radar_chart}
+                        </div>
+                        <div class="radar-legend">
+                            <div class="legend-item">
+                                <div class="legend-color legend-actual"></div>
+                                <span>Actual Score</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color legend-threshold"></div>
+                                <span>Threshold</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -430,112 +588,6 @@ class ReportGenerator:
             Generated by watsonx.ai Pipeline Integration | {generation_time}
         </div>
     </div>
-    
-    <script>
-        // Score Distribution Chart
-        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
-        new Chart(scoreCtx, {{
-            type: 'bar',
-            data: {{
-                labels: {chart_labels},
-                datasets: [{{
-                    label: 'Score',
-                    data: {chart_scores},
-                    backgroundColor: [
-                        'rgba(102, 126, 234, 0.8)',
-                        'rgba(118, 75, 162, 0.8)',
-                        'rgba(23, 162, 184, 0.8)',
-                        'rgba(40, 167, 69, 0.8)'
-                    ],
-                    borderColor: [
-                        'rgba(102, 126, 234, 1)',
-                        'rgba(118, 75, 162, 1)',
-                        'rgba(23, 162, 184, 1)',
-                        'rgba(40, 167, 69, 1)'
-                    ],
-                    borderWidth: 2
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {{
-                    y: {{
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {{
-                            callback: function(value) {{
-                                return value + '/100';
-                            }}
-                        }}
-                    }}
-                }},
-                plugins: {{
-                    legend: {{
-                        display: false
-                    }},
-                    tooltip: {{
-                        callbacks: {{
-                            label: function(context) {{
-                                return context.parsed.y + '/100';
-                            }}
-                        }}
-                    }}
-                }}
-            }}
-        }});
-        
-        // Threshold Comparison Chart
-        const thresholdCtx = document.getElementById('thresholdChart').getContext('2d');
-        new Chart(thresholdCtx, {{
-            type: 'radar',
-            data: {{
-                labels: {threshold_labels},
-                datasets: [
-                    {{
-                        label: 'Actual Score',
-                        data: {threshold_scores},
-                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                        borderColor: 'rgba(102, 126, 234, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(102, 126, 234, 1)',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: 'rgba(102, 126, 234, 1)'
-                    }},
-                    {{
-                        label: 'Threshold',
-                        data: {threshold_values},
-                        backgroundColor: 'rgba(220, 53, 69, 0.2)',
-                        borderColor: 'rgba(220, 53, 69, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(220, 53, 69, 1)',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: 'rgba(220, 53, 69, 1)'
-                    }}
-                ]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {{
-                    r: {{
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {{
-                            stepSize: 20
-                        }}
-                    }}
-                }},
-                plugins: {{
-                    legend: {{
-                        position: 'top'
-                    }}
-                }}
-            }}
-        }});
-    </script>
 </body>
 </html>
 """
@@ -565,6 +617,115 @@ class ReportGenerator:
                     </div>
 """
     
+    def generate_bar_chart(self, scores: Dict[str, int]) -> str:
+        """Generate CSS bar chart"""
+        labels = ['Code Quality', 'Security', 'Maintainability', 'Overall']
+        values = [
+            scores.get('code_quality', 0),
+            scores.get('security', 0),
+            scores.get('maintainability', 0),
+            scores.get('overall', 0)
+        ]
+        
+        bars = ""
+        for label, value in zip(labels, values):
+            height_percent = value * 3  # Scale to 300px max height
+            bars += f"""
+                            <div class="bar">
+                                <div class="bar-fill" style="height: {height_percent}px;">
+                                    <span class="bar-value">{value}</span>
+                                </div>
+                                <div class="bar-label">{label}</div>
+                            </div>
+"""
+        return bars
+    
+    def generate_radar_chart(self, scores: Dict[str, int], thresholds: Dict[str, int]) -> str:
+        """Generate SVG radar chart"""
+        import math
+        
+        # Chart dimensions
+        size = 300
+        center = size / 2
+        radius = size / 2 - 40
+        
+        # Metrics
+        metrics = ['Code Quality', 'Security', 'Maintainability']
+        actual_values = [
+            scores.get('code_quality', 0),
+            scores.get('security', 0),
+            scores.get('maintainability', 0)
+        ]
+        threshold_values = [
+            thresholds.get('code_quality', 70),
+            thresholds.get('security', 80),
+            thresholds.get('maintainability', 60)
+        ]
+        
+        # Calculate points
+        def get_point(value, index, num_points):
+            angle = (2 * math.pi * index / num_points) - (math.pi / 2)
+            r = (value / 100) * radius
+            x = center + r * math.cos(angle)
+            y = center + r * math.sin(angle)
+            return x, y
+        
+        # Generate grid circles
+        grid_circles = ""
+        for i in range(1, 6):
+            r = radius * i / 5
+            grid_circles += f'<circle cx="{center}" cy="{center}" r="{r}" class="radar-grid"/>\n'
+        
+        # Generate axes and labels
+        axes = ""
+        labels = ""
+        for i, metric in enumerate(metrics):
+            x, y = get_point(100, i, len(metrics))
+            axes += f'<line x1="{center}" y1="{center}" x2="{x}" y2="{y}" class="radar-axis"/>\n'
+            
+            # Label position (slightly outside)
+            label_x, label_y = get_point(110, i, len(metrics))
+            # Adjust text anchor based on position
+            anchor = "middle"
+            if label_x < center - 10:
+                anchor = "end"
+            elif label_x > center + 10:
+                anchor = "start"
+            
+            labels += f'<text x="{label_x}" y="{label_y}" class="radar-label" text-anchor="{anchor}">{metric}</text>\n'
+        
+        # Generate actual score polygon
+        actual_points = []
+        for i, value in enumerate(actual_values):
+            x, y = get_point(value, i, len(actual_values))
+            actual_points.append(f"{x},{y}")
+        actual_polygon = f'<polygon points="{" ".join(actual_points)}" class="radar-area-actual"/>\n'
+        
+        # Generate threshold polygon
+        threshold_points = []
+        for i, value in enumerate(threshold_values):
+            x, y = get_point(value, i, len(threshold_values))
+            threshold_points.append(f"{x},{y}")
+        threshold_polygon = f'<polygon points="{" ".join(threshold_points)}" class="radar-area-threshold"/>\n'
+        
+        # Generate points
+        points_svg = ""
+        for i, value in enumerate(actual_values):
+            x, y = get_point(value, i, len(actual_values))
+            points_svg += f'<circle cx="{x}" cy="{y}" r="4" class="radar-point"/>\n'
+        
+        svg = f"""
+                            <svg width="{size}" height="{size}" viewBox="0 0 {size} {size}">
+                                {grid_circles}
+                                {axes}
+                                {threshold_polygon}
+                                {actual_polygon}
+                                {points_svg}
+                                {labels}
+                            </svg>
+"""
+        return svg
+    
     def generate_issue_html(self, issue: Dict[str, Any]) -> str:
         """Generate HTML for an issue"""
         severity = issue.get('severity', 'MEDIUM').upper()
@@ -592,7 +753,7 @@ class ReportGenerator:
     
     def generate_report(self, review_data: Dict[str, Any], gate_data: Dict[str, Any], 
                        commit: str, author: str, output_file: str):
-        """Generate comprehensive HTML report with charts"""
+        """Generate comprehensive HTML report with CSS/SVG charts"""
         
         # Generate score cards - USE ACTUAL DATA FROM review_data
         scores = review_data.get('scores', {})
@@ -602,28 +763,10 @@ class ReportGenerator:
         score_cards += self.generate_score_card("Maintainability", scores.get('maintainability', 0))
         score_cards += self.generate_score_card("Overall", scores.get('overall', 0))
         
-        # Prepare chart data
-        chart_labels = json.dumps(['Code Quality', 'Security', 'Maintainability', 'Overall'])
-        chart_scores = json.dumps([
-            scores.get('code_quality', 0),
-            scores.get('security', 0),
-            scores.get('maintainability', 0),
-            scores.get('overall', 0)
-        ])
-        
-        # Threshold comparison data
+        # Generate charts
+        bar_chart = self.generate_bar_chart(scores)
         thresholds = gate_data.get('thresholds', {})
-        threshold_labels = json.dumps(['Code Quality', 'Security', 'Maintainability'])
-        threshold_scores = json.dumps([
-            scores.get('code_quality', 0),
-            scores.get('security', 0),
-            scores.get('maintainability', 0)
-        ])
-        threshold_values = json.dumps([
-            thresholds.get('code_quality', 70),
-            thresholds.get('security', 80),
-            thresholds.get('maintainability', 60)
-        ])
+        radar_chart = self.generate_radar_chart(scores, thresholds)
         
         # Generate issues list
         issues = review_data.get('issues', [])
@@ -689,11 +832,8 @@ class ReportGenerator:
             timestamp=review_data.get('timestamp', 'N/A'),
             review_depth=review_data.get('review_depth', 'STANDARD'),
             score_cards=score_cards,
-            chart_labels=chart_labels,
-            chart_scores=chart_scores,
-            threshold_labels=threshold_labels,
-            threshold_scores=threshold_scores,
-            threshold_values=threshold_values,
+            bar_chart=bar_chart,
+            radar_chart=radar_chart,
             gate_status=gate_status,
             gate_status_class=gate_status_class,
             gate_status_icon=gate_status_icon,
@@ -715,7 +855,7 @@ class ReportGenerator:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Pipeline Report with Charts")
+    parser = argparse.ArgumentParser(description="Generate Pipeline Report with CSS/SVG Charts")
     parser.add_argument("--review-file", required=True, help="Review report JSON file")
     parser.add_argument("--quality-gate-file", required=True, help="Quality gate result JSON file")
     parser.add_argument("--commit", required=True, help="Git commit hash")
