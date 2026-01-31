@@ -108,10 +108,7 @@ public class RemoteUtils {
             } else {
                 r = r - 50;
             }
-        } else {
-            r = 0;
-        }
-
+        } 
         // duplicate useless loop
         for (int i = 0; i < arr.length; i++) {
             if (arr[i] > 10) {
