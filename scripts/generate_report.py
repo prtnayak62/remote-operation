@@ -539,7 +539,7 @@ class ReportGenerator:
         html += "                </li>\n"
         return html
     
-    def generate_report(self, review_data: Dict[str, Any], gate_data: Dict[str, Any], 
+    def generate_report(self, review_data: Dict[str, Any], gate_data: Dict[str, Any],
                        commit: str, author: str, output_file: str):
         """Generate comprehensive HTML report"""
         
@@ -547,6 +547,15 @@ class ReportGenerator:
         scores = review_data.get('scores', {})
         thresholds = gate_data.get('thresholds', {})
         details = gate_data.get('details', {})
+        
+        # DEBUG: Print what we're reading
+        print("\n" + "="*60)
+        print("DEBUG: Data being used for report generation")
+        print("="*60)
+        print(f"Review data scores: {scores}")
+        print(f"Gate data scores: {gate_data.get('scores', {})}")
+        print(f"Thresholds: {thresholds}")
+        print("="*60 + "\n")
         
         # Generate score rows
         score_rows = self.generate_score_rows(scores)

@@ -191,6 +191,8 @@ def main():
             print(f"   Code Quality: {scores.get('code_quality', 0)}")
             print(f"   Security: {scores.get('security', 0)}")
             print(f"   Maintainability: {scores.get('maintainability', 0)}")
+            print(f"   Overall: {scores.get('overall', 0)}")
+            print(f"\n   DEBUG: Full review data scores: {review_data.get('scores', {})}")
         except Exception as e:
             print(f"❌ Error reading review file: {e}")
             print(f"   Falling back to command-line scores if provided")
