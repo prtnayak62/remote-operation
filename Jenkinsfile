@@ -259,6 +259,20 @@ def evaluateQualityGate() {
         return
     }
     
+    // Check build history for unresolved issues
+    def historyCheck = bat(
+        script: """
+            @echo off
+            python scripts\\build_history_tracker.py --action check
+        """,
+        returnStatus: true
+    )
+    
+    if (historyCheck != 0) {
+        echo "⚠️ Warning: Previous builds have unresolved issues"
+        // Continue but mark as warning
+    }
+    
     def thresholds = determineThresholds()
     
     def qualityGateResult = bat(
@@ -277,6 +291,9 @@ def evaluateQualityGate() {
     )
     
     processQualityGateResults()
+    
+    // Add build to history
+    addBuildToHistory()
 }
 
 /**
@@ -410,6 +427,35 @@ def handleFailure() {
 def handleUnstable() {
     echo "⚠️ Pipeline completed with warnings"
     echo "Quality Gate: ${env.QUALITY_GATE_STATUS}"
+}
+
+/**
+ * Add build to history tracker
+ */
+def addBuildToHistory() {
+    def buildStatus = env.QUALITY_GATE_STATUS == 'FAILED' ? 'FAILED' :
+                     env.QUALITY_GATE_STATUS == 'WARNING' ? 'WARNING' : 'PASSED'
+    
+    bat """
+        @echo off
+        python scripts\\build_history_tracker.py ^
+            --action add ^
+            --commit ${env.GIT_COMMIT_SHORT} ^
+            --author "${env.GIT_AUTHOR}" ^
+            --status ${buildStatus} ^
+            --review-file review-report.json ^
+            --quality-gate-file quality-gate-result.json
+    """
+    
+    // Generate history report
+    bat """
+        @echo off
+        python scripts\\build_history_tracker.py ^
+            --action report ^
+            --output-file history-report.json
+    """
+    
+    archiveArtifacts artifacts: 'build-history.json,history-report.json', allowEmptyArchive: true
 }
 
 /**
