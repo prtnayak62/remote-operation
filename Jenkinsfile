@@ -154,6 +154,17 @@ pipeline {
         
         always {
             script {
+                // Publish HTML report with full styling
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: '.',
+                    reportFiles: 'pipeline-report.html',
+                    reportName: 'Pipeline Report',
+                    reportTitles: 'WatsonX Code Review Report'
+                ])
+                
                 cleanup()
             }
         }
