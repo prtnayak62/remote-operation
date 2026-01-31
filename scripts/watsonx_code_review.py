@@ -260,12 +260,21 @@ Respond ONLY with valid JSON, no other text."""
     def _parse_watsonx_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
         """Parse watsonx.ai response with improved error handling"""
         try:
+            print(f"\n🔍 DEBUG: Parsing WatsonX response...")
+            print(f"Response keys: {response.keys()}")
+            
             generated_text = response['results'][0]['generated_text']
+            print(f"Generated text length: {len(generated_text)} characters")
+            print(f"Generated text preview (first 500 chars):\n{generated_text[:500]}")
             
             # Try to find and extract JSON from response
             json_start = generated_text.find('{')
             if json_start == -1:
+                print(f"❌ No JSON object found in response")
+                print(f"Full generated text:\n{generated_text}")
                 raise ValueError("No JSON object found in response")
+            
+            print(f"JSON starts at position: {json_start}")
             
             # Find the matching closing brace
             brace_count = 0
@@ -280,17 +289,25 @@ Respond ONLY with valid JSON, no other text."""
                         break
             
             json_str = generated_text[json_start:json_end]
+            print(f"Extracted JSON string:\n{json_str}")
+            
             parsed_data = json.loads(json_str)
+            print(f"✅ Successfully parsed JSON")
+            print(f"Parsed data keys: {parsed_data.keys()}")
             
             # Validate required fields
             if 'scores' not in parsed_data:
+                print(f"❌ Missing 'scores' field in parsed data")
+                print(f"Available fields: {list(parsed_data.keys())}")
                 raise ValueError("Missing 'scores' field in response")
             
+            print(f"Scores found: {parsed_data['scores']}")
             return parsed_data
             
         except Exception as e:
-            print(f"Error parsing watsonx response: {e}")
-            print(f"Response preview: {str(response)[:500]}")
+            print(f"\n❌ ERROR parsing watsonx response: {e}")
+            print(f"Response type: {type(response)}")
+            print(f"Response preview: {str(response)[:1000]}")
             raise
     
     def _generate_mock_review(self, files: List[Dict[str, Any]], review_depth: str) -> Dict[str, Any]:
