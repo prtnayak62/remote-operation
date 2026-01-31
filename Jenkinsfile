@@ -83,7 +83,13 @@ pipeline {
             steps {
                 script {
                     echo "🚦 Evaluating Quality Gate..."
-                    evaluateQualityGate()
+                    try {
+                        evaluateQualityGate()
+                    } catch (Exception e) {
+                        // Store the error but don't fail yet - let report generate first
+                        env.QUALITY_GATE_ERROR = e.getMessage()
+                        echo "⚠️ Quality Gate failed, but continuing to generate report..."
+                    }
                 }
             }
         }
@@ -117,6 +123,11 @@ pipeline {
                 script {
                     echo "📄 Generating comprehensive report..."
                     generateReport()
+                    
+                    // Now check if Quality Gate failed and fail the build AFTER report is generated
+                    if (env.QUALITY_GATE_ERROR) {
+                        error(env.QUALITY_GATE_ERROR)
+                    }
                 }
             }
         }
