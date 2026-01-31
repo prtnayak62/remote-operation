@@ -269,8 +269,7 @@ def evaluateQualityGate() {
     )
     
     if (historyCheck != 0) {
-        echo "⚠️ Warning: Previous builds have unresolved issues"
-        // Continue but mark as warning
+        error("❌ Build BLOCKED: Previous builds have unresolved issues that must be fixed first. Check build history for details.")
     }
     
     def thresholds = determineThresholds()
@@ -279,9 +278,7 @@ def evaluateQualityGate() {
         script: """
             @echo off
             python scripts\\quality_gate.py ^
-                --code-quality-score ${env.CODE_QUALITY_SCORE} ^
-                --security-score ${env.SECURITY_SCORE} ^
-                --maintainability-score ${env.MAINTAINABILITY_SCORE} ^
+                --review-file "review-report.json" ^
                 --code-threshold ${thresholds.code} ^
                 --security-threshold ${thresholds.security} ^
                 --maintainability-threshold ${thresholds.maintainability} ^

@@ -89,32 +89,52 @@ class BuildHistoryTracker:
     def update_unresolved_issues(self, commit: str, issues: List[Dict], status: str):
         """Track issues that haven't been resolved"""
         if status == "FAILED":
-            # Add new issues
+            # Add new issues from failed build
             for issue in issues:
-                issue_key = f"{issue.get('file', 'unknown')}:{issue.get('line', 0)}"
+                issue_key = f"{issue.get('file', 'unknown')}:{issue.get('line', 0)}:{issue.get('message', '')[:50]}"
                 if issue_key not in self.history["unresolved_issues"]:
                     self.history["unresolved_issues"][issue_key] = {
                         "first_seen": commit,
                         "last_seen": commit,
                         "occurrences": 1,
-                        "issue": issue
+                        "issue": issue,
+                        "status": "UNRESOLVED"
                     }
                 else:
                     self.history["unresolved_issues"][issue_key]["last_seen"] = commit
                     self.history["unresolved_issues"][issue_key]["occurrences"] += 1
         else:
-            # Build passed - check if issues are resolved
-            current_issue_keys = set()
+            # Build passed - but DON'T automatically remove issues
+            # Issues should only be removed if:
+            # 1. The same file was reviewed again and the issue is gone
+            # 2. Or manually marked as resolved
+            
+            # Get list of files reviewed in this commit
+            reviewed_files = set()
             for issue in issues:
-                issue_key = f"{issue.get('file', 'unknown')}:{issue.get('line', 0)}"
-                current_issue_keys.add(issue_key)
+                reviewed_files.add(issue.get('file', 'unknown'))
+            
+            # Only remove issues from files that were actually reviewed in this commit
+            resolved_keys = []
+            for issue_key, data in self.history["unresolved_issues"].items():
+                issue_file = data["issue"].get('file', 'unknown')
+                
+                # If this file was reviewed in current commit
+                if issue_file in reviewed_files:
+                    # Check if the issue still exists
+                    issue_still_exists = False
+                    for current_issue in issues:
+                        current_key = f"{current_issue.get('file', 'unknown')}:{current_issue.get('line', 0)}:{current_issue.get('message', '')[:50]}"
+                        if current_key == issue_key:
+                            issue_still_exists = True
+                            break
+                    
+                    # If issue doesn't exist anymore in the reviewed file, mark as resolved
+                    if not issue_still_exists:
+                        resolved_keys.append(issue_key)
+                        print(f"✅ Resolved issue in {issue_file}")
             
             # Remove resolved issues
-            resolved_keys = []
-            for issue_key in self.history["unresolved_issues"]:
-                if issue_key not in current_issue_keys:
-                    resolved_keys.append(issue_key)
-            
             for key in resolved_keys:
                 del self.history["unresolved_issues"][key]
     
@@ -165,16 +185,26 @@ class BuildHistoryTracker:
     
     def should_block_build(self) -> tuple[bool, str]:
         """Determine if build should be blocked based on history"""
-        # Block if there are critical unresolved issues
+        # Block if there are ANY unresolved issues from previous failed builds
         unresolved = self.get_unresolved_issues()
-        critical_issues = [i for i in unresolved if i.get('severity') == 'CRITICAL']
         
-        if critical_issues:
-            return True, f"Build blocked: {len(critical_issues)} critical unresolved issues from previous commits"
+        if unresolved:
+            critical_issues = [i for i in unresolved if i.get('severity') == 'CRITICAL']
+            high_issues = [i for i in unresolved if i.get('severity') == 'HIGH']
+            
+            if critical_issues:
+                return True, f"Build blocked: {len(critical_issues)} CRITICAL unresolved issues from previous commits must be fixed first"
+            
+            if high_issues:
+                return True, f"Build blocked: {len(high_issues)} HIGH severity unresolved issues from previous commits must be fixed first"
+            
+            # For medium/low issues, warn but don't block
+            if len(unresolved) > 0:
+                return True, f"Build blocked: {len(unresolved)} unresolved issues from previous failed builds must be addressed"
         
         # Block if too many consecutive failures
-        if self.history["consecutive_failures"] >= 5:
-            return True, f"Build blocked: {self.history['consecutive_failures']} consecutive failures"
+        if self.history["consecutive_failures"] >= 3:
+            return True, f"Build blocked: {self.history['consecutive_failures']} consecutive failures - fix issues before proceeding"
         
         return False, ""
     
@@ -234,7 +264,10 @@ def main():
         if unresolved:
             print(f"\n⚠️ {len(unresolved)} unresolved issues from previous commits:")
             for issue in unresolved[:5]:  # Show first 5
-                print(f"  - {issue.get('file')}: {issue.get('message')[:60]}...")
+                file_name = issue.get('file', 'unknown')
+                message = issue.get('message', 'No message')
+                message_preview = message[:60] if message else 'No message'
+                print(f"  - {file_name}: {message_preview}...")
                 print(f"    First seen: {issue.get('first_seen_commit')}, Occurrences: {issue.get('occurrences')}")
     
     elif args.action == 'check':
