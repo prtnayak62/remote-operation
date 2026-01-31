@@ -159,11 +159,14 @@ class QualityGate:
 
 def main():
     parser = argparse.ArgumentParser(description="Quality Gate Evaluation")
-    parser.add_argument("--code-quality-score", type=int, required=True, 
+    
+    # Support both methods: reading from review file OR individual scores
+    parser.add_argument("--review-file", help="Review report JSON file (preferred method)")
+    parser.add_argument("--code-quality-score", type=int,
                        help="Code quality score (0-100)")
-    parser.add_argument("--security-score", type=int, required=True,
+    parser.add_argument("--security-score", type=int,
                        help="Security score (0-100)")
-    parser.add_argument("--maintainability-score", type=int, required=True,
+    parser.add_argument("--maintainability-score", type=int,
                        help="Maintainability score (0-100)")
     parser.add_argument("--code-threshold", type=int, default=70,
                        help="Code quality threshold (default: 70)")
@@ -176,12 +179,43 @@ def main():
     
     args = parser.parse_args()
     
-    # Prepare scores and thresholds
-    scores = {
-        "code_quality": args.code_quality_score,
-        "security": args.security_score,
-        "maintainability": args.maintainability_score
-    }
+    # Prepare scores - read from review file if provided, otherwise use individual scores
+    if args.review_file:
+        print(f"📖 Reading scores from review file: {args.review_file}")
+        try:
+            with open(args.review_file, 'r', encoding='utf-8') as f:
+                review_data = json.load(f)
+            
+            scores = review_data.get('scores', {})
+            print(f"✅ Loaded scores from review file")
+            print(f"   Code Quality: {scores.get('code_quality', 0)}")
+            print(f"   Security: {scores.get('security', 0)}")
+            print(f"   Maintainability: {scores.get('maintainability', 0)}")
+        except Exception as e:
+            print(f"❌ Error reading review file: {e}")
+            print(f"   Falling back to command-line scores if provided")
+            if not all([args.code_quality_score, args.security_score, args.maintainability_score]):
+                print(f"❌ Error: No valid scores available")
+                return 1
+            scores = {
+                "code_quality": args.code_quality_score,
+                "security": args.security_score,
+                "maintainability": args.maintainability_score
+            }
+    else:
+        # Use individual scores from command line
+        if not all([args.code_quality_score is not None,
+                   args.security_score is not None,
+                   args.maintainability_score is not None]):
+            print("❌ Error: Either --review-file or all individual scores (--code-quality-score, --security-score, --maintainability-score) must be provided")
+            return 1
+        
+        print(f"📊 Using scores from command-line arguments")
+        scores = {
+            "code_quality": args.code_quality_score,
+            "security": args.security_score,
+            "maintainability": args.maintainability_score
+        }
     
     thresholds = {
         "code_quality": args.code_threshold,
